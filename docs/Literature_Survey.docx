@@ -144,3 +144,74 @@ Enables real-time insights for recommendation systems, fraud detection, and clic
 Tightly coupled to the AWS ecosystem, limiting cloud portability
 Lambda Architecture increases complexity by requiring both batch and streaming pipelines
 No experimental performance metrics (throughput, latency, fault tolerance) provided
+
+#Student 3- Ivy Gupta
+## Paper 1 – A Meta Reinforcement Learning Approach for Predictive Autoscaling in the Cloud
+
+This paper proposes a Meta Reinforcement Learning (Meta-RL) model for predictive cloud auto-scaling that adapts quickly to changing workloads while optimizing resource usage.
+
+#Advantages**
+- Adapts quickly to changing cloud workloads.
+- Improves resource utilization and reduces costs.
+- Minimizes response time and SLA violations.
+
+#Limitations**
+- Requires extensive training data.
+- Computationally expensive to train.
+- Mainly evaluated in simulated environments.
+
+## Paper 2 – A Machine Learning Approach for E-Commerce Sales Forecasting and Price Optimization in the Digital Society Era
+
+This paper uses machine learning to forecast e-commerce sales and optimize product pricing using historical sales data.
+
+#Advantages**
+- Improves sales forecasting accuracy.
+- Supports intelligent price optimization.
+- Helps businesses make data-driven decisions.
+
+#Limitations**
+- Focuses only on sales forecasting and pricing.
+- Does not address cloud resource management.
+- Depends on high-quality historical data.
+
+## Paper 3 – A Systematic Review of Demand Forecasting Models for Retail E-Commerce: Enhancing Accuracy in Inventory and Delivery Planning
+
+This paper reviews different demand forecasting techniques used to improve inventory management and delivery planning in retail e-commerce.
+
+#Advantages**
+- Compares various forecasting techniques.
+- Highlights best practices for inventory planning.
+- Identifies future research opportunities.
+
+#Limitations**
+- Review paper without implementation.
+- Does not propose a new forecasting model.
+- Does not address cloud auto-scaling.
+
+## Paper 4 – AI-Driven Dynamic Scaling Frameworks for Resilient Microservices in Cloud-Based E-Commerce Platforms
+
+This paper proposes an AI-based framework that dynamically scales cloud microservices to improve the performance of e-commerce applications.
+
+#Advantages**
+- Enables intelligent auto-scaling.
+- Improves application performance during traffic spikes.
+- Enhances resource utilization.
+
+#Limitations**
+- Complex to implement.
+- Requires continuous monitoring and model training.
+- Limited large-scale validation.
+
+## Paper 5 – Emerging Technologies in E-Commerce Demand Forecasting: Trends, Practices, and Future Perspectives
+
+This paper reviews emerging AI and Big Data technologies used for demand forecasting in e-commerce and discusses future research directions.
+
+#Advantages**
+- Reviews modern forecasting technologies.
+- Highlights current trends and future opportunities.
+- Explains the role of AI in demand prediction.
+
+#Limitations**
+- Survey paper without implementation.
+- Does not propose a new model.
+- Does not focus on cloud resource optimization.
