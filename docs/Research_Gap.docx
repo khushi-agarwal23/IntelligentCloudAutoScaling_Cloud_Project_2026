@@ -22,3 +22,13 @@ Overall, none of the reviewed studies provide a unified, empirically validated f
 
 To overcome these limitations, this project proposes an **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**. The proposed system continuously monitors real-time cloud performance metrics, learns optimal scaling policies through reinforcement learning by interacting with the cloud environment, and dynamically allocates AWS resources in response to sudden demand fluctuations. This approach aims to minimize response latency, reduce SLA violations, and achieve efficient, cost-optimized resource utilization during high-traffic festival sale events — addressing the gap left by existing reactive, threshold-based, and purely conceptual approaches.
 
+
+Student 3- Ivy Gupta
+
+The literature survey indicates that existing research mainly focuses on demand forecasting, sales prediction, price optimization, and AI-driven cloud scaling. While these approaches improve forecasting accuracy and resource utilization, they do not provide a complete solution for intelligent, real-time cloud auto-scaling during unpredictable e-commerce traffic spikes.
+
+Most forecasting studies concentrate on predicting customer demand but do not integrate their predictions with cloud resource management. Similarly, AI-based scaling frameworks and Meta Reinforcement Learning approaches improve resource allocation but require extensive training and are often evaluated only in simulated or limited environments. Survey papers provide valuable insights into emerging technologies but lack practical implementation and experimental validation.
+
+Furthermore, current solutions rarely combine demand forecasting, reinforcement learning, and AWS cloud services into a single adaptive framework capable of continuously learning from changing workloads and making autonomous scaling decisions. They also provide limited evaluation of cost optimization and application performance under real-world festival-sale traffic conditions.
+
+To address these limitations, this project proposes an **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**. The proposed system combines demand-aware scaling with Reinforcement Learning to continuously monitor cloud performance metrics and dynamically allocate AWS resources based on real-time workload changes. This approach aims to improve application availability, reduce response time and operational costs, and ensure efficient resource utilization during high-traffic e-commerce events.
