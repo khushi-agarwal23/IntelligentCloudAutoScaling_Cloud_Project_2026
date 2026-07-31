@@ -1,6 +1,6 @@
 # Literature Survey
 
-Student 2 - Khushi Agarwal
+Student 1 - Khushi Agarwal
 ## Paper 1 – Demand Forecasting using Deep Reinforcement Learning and Bald Eagle Search
 
 This paper proposes a demand forecasting model using Deep Q-Network (DQN) and the Bald Eagle Search (BES) optimization algorithm. The model predicts product demand using historical sales data and customer purchasing behaviour. It helps businesses improve inventory management and demand planning.
@@ -73,3 +73,74 @@ This paper explains how Large AI Models (LLMs) improve intelligent decision-maki
 **Limitations**
 - It is a survey paper without practical implementation.
 - Does not focus on cloud auto-scaling or e-commerce applications.
+
+#Student 2 Arpita Sinha
+#Paper 1 An approach to optimize Kubernetes resource management through its adaptive scheduling system combined with threshold-based predictive scaling
+
+Combines time-series forecasting with adaptive pod scheduling to proactively scale Kubernetes resources before demand spikes hit.
+
+# Advantages:
+Reduces pod scheduling latency, enabling faster deployment
+Enables proactive (rather than reactive) scaling by predicting future CPU/memory demand
+Integrates easily with existing monitoring tools (Prometheus, Grafana)
+
+#Limitations:
+Evaluated only in Minikube, not representative of large-scale production clusters
+Only considers CPU/memory, ignoring network bandwidth, storage I/O, and energy consumption
+
+
+##Paper 2 Intelligent optimization of high-concurrency distributed systems
+Uses microservice architecture and multi-tier caching to keep distributed systems responsive and stable under sudden high-concurrency traffic.
+
+#Advantages:
+Reduces latency and database overload under high concurrency
+Improves system responsiveness and stability during traffic spikes
+Generalizable to other high-parallelism distributed systems beyond e-commerce
+
+#Limitations:
+Dataset and experimental setup are not specified in the abstract
+Implementation complexity and deployment cost of microservices/caching are not discussed
+No comparison with existing optimization or resource management algorithms
+
+
+
+##Paper 3 Big Data and cloud integration for scalable solutions in E-commerce and digital transformation.
+Reviews how cloud computing and Big Data technologies together enable scalable storage, processing, and analytics for e-commerce platforms.
+
+#Advantages:
+Explains how cloud computing enables scalable storage/processing of large datasets
+Demonstrates Big Data analytics supporting data-driven decision-making
+Uses real industry case studies for practical grounding
+
+#Limitations:
+Purely conceptual — no implementation or performance evaluation provided
+No dataset or experimental environment specified
+Data privacy, security, and regulatory compliance are not discussed
+
+
+##Paper 4 Intelligent Auto-Scaling in Hybrid and Multi-Cloud Architectures Using Reinforcement Learning
+Surveys how reinforcement learning techniques (Deep RL, Meta-RL, multi-objective RL) can be applied to auto-scale resources across hybrid and multi-cloud environments.
+
+#Advantages:
+Comprehensive overview of RL techniques applicable to cloud auto-scaling
+Discusses multi-objective balancing (performance, cost, energy efficiency)
+Identifies clear future research directions (hybrid approaches, continuous learning)
+
+#Limitations:
+Review paper only — no new RL model proposed or experimentally validated
+RL approaches require extensive training data/compute, raising deployment complexity
+Limited comparison with traditional rule-based or predictive auto-scaling methods
+
+
+##Paper 5 Cloud-Based Big Data Pipeline for Global E-Commerce Analytics
+Implements a Lambda Architecture on AWS to process both batch and real-time e-commerce data for analytics like recommendations and fraud detection.
+
+#Advantages:
+Supports both batch and real-time analytics simultaneously
+Leverages AWS cloud services for scalability and flexibility
+Enables real-time insights for recommendation systems, fraud detection, and clickstream analysis
+
+#Limitations:
+Tightly coupled to the AWS ecosystem, limiting cloud portability
+Lambda Architecture increases complexity by requiring both batch and streaming pipelines
+No experimental performance metrics (throughput, latency, fault tolerance) provided
