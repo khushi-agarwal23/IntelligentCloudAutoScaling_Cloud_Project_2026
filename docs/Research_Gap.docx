@@ -1,6 +1,6 @@
 # Research Gap
 
-Student 2 - Khushi Agarwal
+Student 1 - Khushi Agarwal
 The literature survey shows that most existing research focuses on demand forecasting, customer behaviour analysis, business intelligence, and intelligent decision-making using Artificial Intelligence. Although these approaches improve prediction accuracy and business operations, they do not solve the problem of intelligent cloud resource management during sudden traffic spikes.
 
 Traditional cloud auto-scaling techniques mainly depend on fixed threshold values such as CPU utilization or memory usage. These rule-based methods cannot efficiently handle unpredictable workload changes during e-commerce festival sales. As a result, they may cause high response time, server overload, poor user experience, and increased cloud infrastructure costs.
@@ -8,3 +8,17 @@ Traditional cloud auto-scaling techniques mainly depend on fixed threshold value
 Very few studies combine Reinforcement Learning with AWS cloud services to make intelligent real-time scaling decisions. Existing research also lacks an adaptive framework that continuously learns from changing workloads and automatically allocates cloud resources.
 
 To overcome these limitations, this project proposes an **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**. The proposed system continuously monitors cloud performance metrics, learns workload patterns using Reinforcement Learning, and automatically scales cloud resources based on real-time demand. This approach improves application performance, ensures high availability during peak traffic, and reduces operational costs through efficient resource utilization.
+
+
+Student 2- Arpita Sinha
+
+The literature survey shows that most existing research on cloud auto-scaling focuses on either predictive forecasting techniques (such as Holt-Winters models) combined with threshold-based rules, or purely conceptual reviews of Big Data and RL-based cloud architectures. While these approaches provide useful theoretical foundations and demonstrate improvements in resource allocation and system responsiveness, they do not adequately address the challenge of intelligent, real-time cloud scaling during highly unpredictable and non-linear traffic surges such as e-commerce festival sales.
+
+Existing threshold-based and predictive auto-scaling methods (Paper 1) react only after workload thresholds are breached or rely on time-series forecasting models that struggle to generalize to irregular, sudden traffic patterns, and have been validated only in small-scale environments like Minikube rather than production-grade clusters. Similarly, studies on high-concurrency distributed systems (Paper 2) and Big Data-cloud integration (Paper 3) either lack a clearly specified dataset and experimental setup, or remain purely conceptual without any implementation, performance evaluation, or cost/energy analysis.
+
+Although reinforcement learning has been identified as a promising direction for cloud auto-scaling (Paper 4), existing work in this area is largely limited to literature reviews that discuss RL techniques conceptually without proposing or experimentally validating a real RL model on production cloud infrastructure. Furthermore, current Big Data pipeline architectures for e-commerce analytics (Paper 5) remain tightly coupled to a single cloud ecosystem, lack cost-optimization evaluation, and do not integrate RL-based auto-scaling directly into their load-balancing layer.
+
+Overall, none of the reviewed studies provide a unified, empirically validated framework that combines reinforcement learning with real cloud services (such as AWS EC2, CloudWatch, and Lambda) to make adaptive, real-time scaling decisions specifically under festival-sale-like traffic conditions, while simultaneously optimizing performance, resource utilization, and operational cost.
+
+To overcome these limitations, this project proposes an **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**. The proposed system continuously monitors real-time cloud performance metrics, learns optimal scaling policies through reinforcement learning by interacting with the cloud environment, and dynamically allocates AWS resources in response to sudden demand fluctuations. This approach aims to minimize response latency, reduce SLA violations, and achieve efficient, cost-optimized resource utilization during high-traffic festival sale events — addressing the gap left by existing reactive, threshold-based, and purely conceptual approaches.
+
