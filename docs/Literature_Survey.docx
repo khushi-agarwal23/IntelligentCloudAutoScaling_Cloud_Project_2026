@@ -1,0 +1,75 @@
+# Literature Survey
+
+Student 2 - Khushi Agarwal
+## Paper 1 – Demand Forecasting using Deep Reinforcement Learning and Bald Eagle Search
+
+This paper proposes a demand forecasting model using Deep Q-Network (DQN) and the Bald Eagle Search (BES) optimization algorithm. The model predicts product demand using historical sales data and customer purchasing behaviour. It helps businesses improve inventory management and demand planning.
+
+**Advantages**
+- Improves demand prediction accuracy.
+- Supports better inventory management.
+- Reduces forecasting errors.
+
+**Limitations**
+- Focuses only on demand prediction.
+- Does not provide cloud resource management or auto-scaling.
+
+---
+
+## Paper 2 – AI-Based Data Fusion for Intelligent Decision-Making
+
+This paper presents an intelligent decision-making framework that combines data from multiple sources using Artificial Intelligence techniques. It helps organizations make better business decisions by analyzing large amounts of enterprise data.
+
+**Advantages**
+- Improves decision-making accuracy.
+- Processes data from multiple sources.
+- Supports faster business decisions.
+
+**Limitations**
+- Complex implementation.
+- Does not address cloud resource allocation or auto-scaling.
+
+---
+
+## Paper 3 – Customer Behaviour Analysis for E-Commerce
+
+This paper studies customer browsing behaviour, purchase history, and shopping patterns to improve product recommendations and marketing strategies using machine learning techniques.
+
+**Advantages**
+- Improves customer experience.
+- Provides better product recommendations.
+- Supports personalized marketing.
+
+**Limitations**
+- Focuses only on customer behaviour.
+- Does not improve cloud infrastructure performance.
+
+---
+
+## Paper 4 – Data Mining for E-Commerce Business Optimization
+
+This paper uses data mining techniques to analyze customer purchasing behaviour and improve inventory management, logistics, and overall business performance.
+
+**Advantages**
+- Improves inventory management.
+- Supports business planning.
+- Enhances customer satisfaction.
+
+**Limitations**
+- Does not consider cloud infrastructure.
+- Does not provide intelligent auto-scaling.
+
+---
+
+## Paper 5 – Intelligent Decision-Making Driven by Large AI Models: Progress, Challenges and Prospects
+
+This paper explains how Large AI Models (LLMs) improve intelligent decision-making by analyzing large amounts of data and supporting complex business decisions. It discusses recent developments, challenges, and future research directions.
+
+**Advantages**
+- Provides a comprehensive overview of Large AI Models.
+- Explains current research trends and future opportunities.
+- Supports intelligent decision-making across different domains.
+
+**Limitations**
+- It is a survey paper without practical implementation.
+- Does not focus on cloud auto-scaling or e-commerce applications.

@@ -1,0 +1,10 @@
+# Research Gap
+
+Student 2 - Khushi Agarwal
+The literature survey shows that most existing research focuses on demand forecasting, customer behaviour analysis, business intelligence, and intelligent decision-making using Artificial Intelligence. Although these approaches improve prediction accuracy and business operations, they do not solve the problem of intelligent cloud resource management during sudden traffic spikes.
+
+Traditional cloud auto-scaling techniques mainly depend on fixed threshold values such as CPU utilization or memory usage. These rule-based methods cannot efficiently handle unpredictable workload changes during e-commerce festival sales. As a result, they may cause high response time, server overload, poor user experience, and increased cloud infrastructure costs.
+
+Very few studies combine Reinforcement Learning with AWS cloud services to make intelligent real-time scaling decisions. Existing research also lacks an adaptive framework that continuously learns from changing workloads and automatically allocates cloud resources.
+
+To overcome these limitations, this project proposes an **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**. The proposed system continuously monitors cloud performance metrics, learns workload patterns using Reinforcement Learning, and automatically scales cloud resources based on real-time demand. This approach improves application performance, ensures high availability during peak traffic, and reduces operational costs through efficient resource utilization.
