@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        FESTIVALE - Festival Shopping
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="./style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     HEADER
+     ===================================================== -->
+
+<header class="site-header">
+
+    <div class="top-header">
+
+        <a
+            href="#"
+            class="brand"
+            onclick="goHome(); return false;"
+        >
+
+            <div class="brand-name">
+                FESTIVALE
+            </div>
+
+            <div class="brand-tagline">
+                Festival Shopping, Smarter
+            </div>
+
+        </a>
+
+
+        <div class="search-container">
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search for products, categories and more..."
+                autocomplete="off"
+            >
+
+            <button
+                id="searchButton"
+                onclick="searchProducts()"
+                aria-label="Search"
+            >
+                🔍
+            </button>
+
+        </div>
+
+
+        <div class="header-actions">
+
+            <button
+                class="header-action"
+                onclick="openAccount()"
+            >
+
+                <small>
+                    Hello,
+                </small>
+
+                <strong id="accountGreeting">
+                    Sign in
+                </strong>
+
+            </button>
+
+
+            <button
+                class="header-action"
+                onclick="openOrders()"
+            >
+
+                <small>
+                    Your
+                </small>
+
+                <strong>
+                    Orders
+                </strong>
+
+            </button>
+
+
+            <button
+                class="cart-button"
+                onclick="openCart()"
+            >
+
+                🛒 Cart
+
+                <span
+                    class="cart-count"
+                    id="cartCount"
+                >
+                    0
+                </span>
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- NAVIGATION -->
+
+    <nav class="main-nav">
+
+        <button
+            class="mobile-menu-button"
+            onclick="toggleMobileMenu()"
+        >
+            ☰
+        </button>
+
+
+        <button
+            onclick="goHome()"
+        >
+            Home
+        </button>
+
+
+        <button
+            onclick="scrollToProducts()"
+        >
+            ☰ All
+        </button>
+
+
+        <button
+            onclick="filterCategory('Electronics')"
+        >
+            Electronics
+        </button>
+
+
+        <button
+            onclick="filterCategory('Fashion')"
+        >
+            Fashion
+        </button>
+
+
+        <button
+            onclick="filterCategory('Home')"
+        >
+            Home
+        </button>
+
+
+        <button
+            onclick="filterCategory('Beauty')"
+        >
+            Beauty
+        </button>
+
+
+        <button
+            onclick="filterCategory('Gifts')"
+        >
+            Gifts
+        </button>
+
+
+        <button
+            onclick="filterCategory('Food')"
+        >
+            Food
+        </button>
+
+
+        <button
+            onclick="showWishlist()"
+        >
+            ❤️ Wishlist
+        </button>
+
+
+        <button
+            onclick="scrollToCloud()"
+        >
+            ☁️ Cloud Monitoring
+        </button>
+
+
+        <button
+            onclick="openOrders()"
+        >
+            Orders
+        </button>
+
+    </nav>
+
+
+    <!-- MOBILE MENU -->
+
+    <div
+        class="mobile-menu"
+        id="mobileMenu"
+    >
+
+        <button
+            onclick="goHome(); closeMobileMenu();"
+        >
+            Home
+        </button>
+
+        <button
+            onclick="filterCategory('Electronics'); closeMobileMenu();"
+        >
+            Electronics
+        </button>
+
+        <button
+            onclick="filterCategory('Fashion'); closeMobileMenu();"
+        >
+            Fashion
+        </button>
+
+        <button
+            onclick="filterCategory('Home'); closeMobileMenu();"
+        >
+            Home
+        </button>
+
+        <button
+            onclick="filterCategory('Beauty'); closeMobileMenu();"
+        >
+            Beauty
+        </button>
+
+        <button
+            onclick="filterCategory('Gifts'); closeMobileMenu();"
+        >
+            Gifts
+        </button>
+
+        <button
+            onclick="filterCategory('Food'); closeMobileMenu();"
+        >
+            Food
+        </button>
+
+        <button
+            onclick="showWishlist(); closeMobileMenu();"
+        >
+            Wishlist
+        </button>
+
+        <button
+            onclick="scrollToCloud(); closeMobileMenu();"
+        >
+            Cloud Monitoring
+        </button>
+
+    </div>
+
+</header>
+
+
+
+<!-- =====================================================
+     HOME / HERO
+     ===================================================== -->
+
+<section
+    class="hero"
+    id="homeSection"
+>
+
+    <div class="hero-content">
+
+        <span class="hero-badge">
+            ✨ FESTIVAL SALE IS LIVE
+        </span>
+
+
+        <h1>
+
+            Shop Smarter.
+
+            <br>
+
+            Celebrate
+            <span>
+                Bigger.
+            </span>
+
+        </h1>
+
+
+        <p>
+            Discover fashion, electronics,
+            beauty, home essentials, gifts
+            and delicious festival favourites
+            all in one place.
+        </p>
+
+
+        <div class="hero-buttons">
+
+            <button
+                class="hero-primary"
+                onclick="scrollToProducts()"
+            >
+                Start Shopping →
+            </button>
+
+
+            <button
+                class="hero-secondary"
+                onclick="scrollToCloud()"
+            >
+                ☁️ Explore Smart Scaling
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     FEATURES
+     ===================================================== -->
+
+<section class="features">
+
+    <div class="feature">
+
+        <div class="feature-icon">
+            🚚
+        </div>
+
+        <div>
+
+            <strong>
+                Fast Delivery
+            </strong>
+
+            <span>
+                Reliable festival delivery
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="feature">
+
+        <div class="feature-icon">
+            🔒
+        </div>
+
+        <div>
+
+            <strong>
+                Secure Shopping
+            </strong>
+
+            <span>
+                Safe and simple checkout
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="feature">
+
+        <div class="feature-icon">
+            💳
+        </div>
+
+        <div>
+
+            <strong>
+                Easy Payments
+            </strong>
+
+            <span>
+                Multiple payment options
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="feature">
+
+        <div class="feature-icon">
+            ☁️
+        </div>
+
+        <div>
+
+            <strong>
+                Smart Cloud
+            </strong>
+
+            <span>
+                Intelligent auto-scaling
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     PRODUCTS
+     ===================================================== -->
+
+<section
+    class="products-section"
+    id="productsSection"
+>
+
+    <div class="products-header">
+
+        <div>
+
+            <span class="section-label">
+                FESTIVALE COLLECTION
+            </span>
+
+            <h2>
+                Shop Festival Favourites
+            </h2>
+
+            <p id="resultCount">
+                36 products found
+            </p>
+
+        </div>
+
+
+        <button
+            class="view-all-button"
+            onclick="resetFilters()"
+        >
+            View All Products
+        </button>
+
+    </div>
+
+
+
+    <!-- FILTERS -->
+
+    <div class="shop-controls">
+
+        <div class="filter-group">
+
+
+            <!-- CATEGORY -->
+
+            <label>
+
+                Category
+
+                <select
+                    id="categoryFilter"
+                >
+
+                    <option value="all">
+                        All Categories
+                    </option>
+
+                    <option value="Electronics">
+                        Electronics
+                    </option>
+
+                    <option value="Fashion">
+                        Fashion
+                    </option>
+
+                    <option value="Home">
+                        Home
+                    </option>
+
+                    <option value="Beauty">
+                        Beauty
+                    </option>
+
+                    <option value="Gifts">
+                        Gifts
+                    </option>
+
+                    <option value="Food">
+                        Food
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- PRICE -->
+
+            <label>
+
+                Price
+
+                <select
+                    id="priceFilter"
+                >
+
+                    <option value="all">
+                        All Prices
+                    </option>
+
+                    <option value="0-1000">
+                        Under ₹1,000
+                    </option>
+
+                    <option value="1000-2000">
+                        ₹1,000 - ₹2,000
+                    </option>
+
+                    <option value="2000-5000">
+                        ₹2,000 - ₹5,000
+                    </option>
+
+                    <option value="5000+">
+                        Above ₹5,000
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- RATING -->
+
+            <label>
+
+                Rating
+
+                <select
+                    id="ratingFilter"
+                >
+
+                    <option value="0">
+                        All Ratings
+                    </option>
+
+                    <option value="4">
+                        ⭐ 4+ Stars
+                    </option>
+
+                    <option value="4.5">
+                        ⭐ 4.5+ Stars
+                    </option>
+
+                    <option value="4.7">
+                        ⭐ 4.7+ Stars
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- STOCK -->
+
+            <label class="checkbox-filter">
+
+                <input
+                    type="checkbox"
+                    id="stockFilter"
+                >
+
+                In Stock Only
+
+            </label>
+
+        </div>
+
+
+
+        <!-- SORT -->
+
+        <label class="sort-control">
+
+            Sort By
+
+            <select
+                id="sortSelect"
+            >
+
+                <option value="featured">
+                    Featured
+                </option>
+
+                <option value="low">
+                    Price: Low to High
+                </option>
+
+                <option value="high">
+                    Price: High to Low
+                </option>
+
+                <option value="rating">
+                    Customer Rating
+                </option>
+
+                <option value="name">
+                    Name: A-Z
+                </option>
+
+            </select>
+
+        </label>
+
+    </div>
+
+
+
+    <!-- PRODUCTS GRID -->
+
+    <div
+        class="products-grid"
+        id="productsGrid"
+    >
+    </div>
+
+
+
+    <!-- NO PRODUCTS -->
+
+    <div
+        id="noProducts"
+        class="empty-state hidden"
+    >
+
+        <div class="empty-icon">
+            🔎
+        </div>
+
+        <h3>
+            No products found
+        </h3>
+
+        <p>
+            Try changing your filters or search.
+        </p>
+
+        <br>
+
+        <button
+            class="auth-primary"
+            onclick="resetFilters()"
+        >
+            Reset Filters
+        </button>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     CATEGORIES
+     ===================================================== -->
+
+<section>
+
+    <div class="section-heading">
+
+        <span class="section-label">
+            EXPLORE
+        </span>
+
+        <h2>
+            Shop by Category
+        </h2>
+
+        <p>
+            Find exactly what you're looking for.
+        </p>
+
+    </div>
+
+
+    <div class="category-grid">
+
+
+        <div
+            class="category-card"
+            onclick="filterCategory('Electronics')"
+        >
+
+            <div class="category-icon">
+                📱
+            </div>
+
+            <h3>
+                Electronics
+            </h3>
+
+            <p>
+                Tech & gadgets
+            </p>
+
+        </div>
+
+
+
+        <div
+            class="category-card"
+            onclick="filterCategory('Fashion')"
+        >
+
+            <div class="category-icon">
+                👗
+            </div>
+
+            <h3>
+                Fashion
+            </h3>
+
+            <p>
+                Festive styles
+            </p>
+
+        </div>
+
+
+
+        <div
+            class="category-card"
+            onclick="filterCategory('Home')"
+        >
+
+            <div class="category-icon">
+                🏠
+            </div>
+
+            <h3>
+                Home
+            </h3>
+
+            <p>
+                Decor & essentials
+            </p>
+
+        </div>
+
+
+
+        <div
+            class="category-card"
+            onclick="filterCategory('Beauty')"
+        >
+
+            <div class="category-icon">
+                💄
+            </div>
+
+            <h3>
+                Beauty
+            </h3>
+
+            <p>
+                Beauty & skincare
+            </p>
+
+        </div>
+
+
+
+        <div
+            class="category-card"
+            onclick="filterCategory('Gifts')"
+        >
+
+            <div class="category-icon">
+                🎁
+            </div>
+
+            <h3>
+                Gifts
+            </h3>
+
+            <p>
+                Gifts for everyone
+            </p>
+
+        </div>
+
+
+
+        <div
+            class="category-card"
+            onclick="filterCategory('Food')"
+        >
+
+            <div class="category-icon">
+                🍫
+            </div>
+
+            <h3>
+                Food
+            </h3>
+
+            <p>
+                Festival treats
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     WISHLIST
+     ===================================================== -->
+
+<section
+    class="wishlist-section"
+    id="wishlistSection"
+    style="display:none;"
+>
+
+    <div class="section-heading">
+
+        <span class="section-label">
+            YOUR SAVED ITEMS
+        </span>
+
+        <h2>
+            My Wishlist
+        </h2>
+
+        <p>
+            Products you've saved for later.
+        </p>
+
+    </div>
+
+
+    <div
+        class="wishlist-grid"
+        id="wishlistGrid"
+    >
+    </div>
+
+
+    <div
+        id="emptyWishlist"
+        class="empty-state"
+    >
+
+        <div class="empty-icon">
+            ❤️
+        </div>
+
+        <h3>
+            Your wishlist is empty
+        </h3>
+
+        <p>
+            Click the heart on a product to save it here.
+        </p>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     CLOUD MONITORING
+     ===================================================== -->
+
+<section
+    class="cloud-section"
+    id="cloudSection"
+>
+
+    <div class="section-heading">
+
+        <span class="section-label">
+            CLOUD ARCHITECTURE
+        </span>
+
+        <h2>
+            Intelligent Cloud Auto-Scaling
+        </h2>
+
+        <p>
+            Simulate festival traffic and observe
+            how the intelligent scaling system responds.
+        </p>
+
+    </div>
+
+
+    <!-- TRAFFIC CONTROLS -->
+
+    <div class="cloud-controls">
+
+        <button
+            onclick="setTraffic('low')"
+        >
+            Low Traffic
+        </button>
+
+        <button
+            onclick="setTraffic('normal')"
+        >
+            Normal
+        </button>
+
+        <button
+            onclick="setTraffic('medium')"
+        >
+            Medium
+        </button>
+
+        <button
+            onclick="setTraffic('high')"
+        >
+            High
+        </button>
+
+        <button
+            onclick="setTraffic('festival')"
+        >
+            🔥 Festival Peak
+        </button>
+
+        <button
+            onclick="toggleAutoTraffic()"
+        >
+            ▶ Auto Simulation
+        </button>
+
+    </div>
+
+
+
+    <!-- DASHBOARD -->
+
+    <div class="cloud-dashboard">
+
+
+        <!-- REQUEST RATE -->
+
+        <div class="cloud-card">
+
+            <span>
+                Request Rate
+            </span>
+
+            <strong id="requestRate">
+                60
+            </strong>
+
+            <div class="progress-bar">
+
+                <span id="requestBar"></span>
+
+            </div>
+
+            <small>
+                requests / sec
+            </small>
+
+        </div>
+
+
+
+        <!-- CPU -->
+
+        <div class="cloud-card">
+
+            <span>
+                CPU Usage
+            </span>
+
+            <strong id="cpuUsage">
+                45%
+            </strong>
+
+            <div class="progress-bar">
+
+                <span id="cpuBar"></span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- RESPONSE -->
+
+        <div class="cloud-card">
+
+            <span>
+                Response Time
+            </span>
+
+            <strong id="responseTime">
+                150 ms
+            </strong>
+
+            <div class="progress-bar">
+
+                <span id="responseBar"></span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- USERS -->
+
+        <div class="cloud-card">
+
+            <span>
+                Active Users
+            </span>
+
+            <strong id="activeUsers">
+                300
+            </strong>
+
+            <div class="progress-bar">
+
+                <span id="usersBar"></span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- SCALING PANEL -->
+
+    <div class="scaling-panel">
+
+        <h3>
+            Auto-Scaling Decision
+        </h3>
+
+
+        <div>
+
+            Traffic Level:
+
+            <strong id="trafficLevel">
+                NORMAL
+            </strong>
+
+        </div>
+
+
+        <br>
+
+
+        <div>
+
+            Decision:
+
+            <strong id="scalingDecision">
+                MAINTAIN
+            </strong>
+
+        </div>
+
+
+        <p
+            id="decisionText"
+            style="margin-top:10px;"
+        >
+            Maintain
+        </p>
+
+
+        <p
+            id="decisionReason"
+            style="margin-top:5px;"
+        >
+            Current traffic is within normal capacity.
+        </p>
+
+
+        <br>
+
+
+        <div>
+
+            Recommended Action:
+
+            <strong id="recommendedAction">
+                Maintain
+            </strong>
+
+        </div>
+
+
+        <br>
+
+
+        <div>
+
+            Running EC2 Instances:
+
+            <strong id="instanceCount">
+                2
+            </strong>
+
+        </div>
+
+
+        <div
+            class="instance-visual"
+            id="instanceVisual"
+        >
+
+            <span class="instance-box">
+                EC2
+            </span>
+
+            <span class="instance-box">
+                EC2
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     FOOTER
+     ===================================================== -->
+
+<footer class="site-footer">
+
+    <div class="footer-main">
+
+
+        <div class="footer-brand">
+
+            <div class="brand-name">
+                FESTIVALE
+            </div>
+
+            <p>
+                Your intelligent festival-shopping
+                destination powered by modern
+                cloud architecture.
+            </p>
+
+        </div>
+
+
+
+        <div class="footer-column">
+
+            <h4>
+                About
+            </h4>
+
+            <button
+                onclick="showInfo('About FESTIVALE')"
+            >
+                About FESTIVALE
+            </button>
+
+            <button
+                onclick="showInfo('Careers')"
+            >
+                Careers
+            </button>
+
+            <button
+                onclick="showInfo('Technology')"
+            >
+                Technology
+            </button>
+
+        </div>
+
+
+
+        <div class="footer-column">
+
+            <h4>
+                Help
+            </h4>
+
+            <button
+                onclick="showInfo('Help Center')"
+            >
+                Help Center
+            </button>
+
+            <button
+                onclick="showShipping()"
+            >
+                Shipping
+            </button>
+
+            <button
+                onclick="showReturns()"
+            >
+                Returns
+            </button>
+
+        </div>
+
+
+
+        <div class="footer-column">
+
+            <h4>
+                Account
+            </h4>
+
+            <button
+                onclick="openAccount()"
+            >
+                My Account
+            </button>
+
+            <button
+                onclick="openOrders()"
+            >
+                Orders
+            </button>
+
+            <button
+                onclick="showWishlist()"
+            >
+                Wishlist
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer-bottom">
+
+        <span>
+            © 2026 FESTIVALE. Academic Project.
+        </span>
+
+        <span>
+            Intelligent Cloud Auto-Scaling Framework
+        </span>
+
+    </div>
+
+</footer>
+
+
+
+<!-- =====================================================
+     CART OVERLAY
+     ===================================================== -->
+
+<div
+    class="overlay hidden"
+    id="cartOverlay"
+>
+</div>
+
+
+
+<!-- =====================================================
+     CART PANEL
+     ===================================================== -->
+
+<aside
+    class="side-panel"
+    id="cartPanel"
+>
+
+    <div class="side-panel-header">
+
+        <h2>
+            Shopping Cart
+        </h2>
+
+        <button
+            onclick="closeCart()"
+            aria-label="Close cart"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <div
+        class="side-panel-content"
+        id="cartContent"
+    >
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                🛒
+            </div>
+
+            <h3>
+                Your cart is empty
+            </h3>
+
+            <p>
+                Add some festival favourites.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="cart-footer">
+
+        <div class="cart-total-row">
+
+            <strong>
+                Subtotal
+            </strong>
+
+            <strong id="cartSubtotal">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <button
+            class="checkout-button"
+            onclick="openCheckout()"
+        >
+            Proceed to Checkout →
+        </button>
+
+    </div>
+
+</aside>
+
+
+
+<!-- =====================================================
+     MODAL
+     ===================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalOverlay"
+>
+
+    <div class="modal">
+
+        <button
+            class="modal-close"
+            onclick="closeModal()"
+            aria-label="Close"
+        >
+            ×
+        </button>
+
+
+        <div id="modalContent">
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TOAST
+     ===================================================== -->
+
+<div
+    class="toast"
+    id="toast"
+>
+</div>
+
+
+
+<!-- =====================================================
+     JAVASCRIPT
+     ===================================================== -->
+
+<script src="./script.js"></script>
+
+
+</body>
+
+</html>
