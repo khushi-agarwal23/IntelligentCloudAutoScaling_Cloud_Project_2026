@@ -377,6 +377,7 @@ let currentProducts = [...products];
 document.addEventListener("DOMContentLoaded", async function () {
 
     setupFilters();
+    installFrontendPolish();
 
     renderProducts(currentProducts);
 
@@ -491,6 +492,19 @@ function showToast(message) {
 
         }, 2600);
 
+}
+
+
+function showLoadingModal(title = "Please wait", message = "Loading...") {
+    openModal(`
+        <div class="frontend-loading">
+            <div>
+                <div class="spinner"></div>
+                <strong>${escapeHtml(title)}</strong>
+                <p>${escapeHtml(message)}</p>
+            </div>
+        </div>
+    `);
 }
 
 
@@ -1216,103 +1230,79 @@ function updateProductCount() {
 
 function viewProduct(id) {
 
-    const product =
-        products.find(
-            item => item.id === id
-        );
-
+    const product = products.find(item => item.id === id);
     if (!product) return;
 
-
-    const discount =
-        product.oldPrice
-            ? Math.round(
-                (1 - product.price / product.oldPrice) * 100
-            )
-            : 0;
-
+    const discount = product.oldPrice
+        ? Math.round((1 - product.price / product.oldPrice) * 100)
+        : 0;
 
     openModal(`
-
-        <div class="product-detail">
-
+        <div class="product-detail enhanced-product-detail">
             <div class="product-detail-image">
-
-                <img
-                    src="${product.image}"
-                    alt="${escapeHtml(product.name)}"
-                >
-
+                <img src="${product.image}" alt="${escapeHtml(product.name)}">
             </div>
 
             <div class="product-detail-info">
-
-                <span class="section-label">
-                    ${escapeHtml(product.category)}
-                </span>
-
-                <h2>
-                    ${escapeHtml(product.name)}
-                </h2>
+                <span class="section-label">${escapeHtml(product.category)}</span>
+                <h2>${escapeHtml(product.name)}</h2>
 
                 <div class="rating">
                     ⭐ ${product.rating}
-                    <span class="review-count">
-                        Customer rating
-                    </span>
+                    <span class="review-count">Customer rating</span>
                 </div>
 
                 <div class="price-row">
-
-                    <span class="price">
-                        ₹${Number(product.price).toLocaleString("en-IN")}
-                    </span>
-
-                    ${
-                        product.oldPrice
-                            ? `
-                                <span class="old-price">
-                                    ₹${Number(product.oldPrice).toLocaleString("en-IN")}
-                                </span>
-                              `
-                            : ""
-                    }
-
+                    <span class="price">₹${Number(product.price).toLocaleString("en-IN")}</span>
+                    ${product.oldPrice ? `<span class="old-price">₹${Number(product.oldPrice).toLocaleString("en-IN")}</span>` : ""}
                 </div>
 
-                ${
-                    discount
-                        ? `
-                            <div class="discount-badge">
-                                ${discount}% OFF
-                            </div>
-                          `
-                        : ""
-                }
+                ${discount ? `<div class="discount-badge">${discount}% OFF</div>` : ""}
 
-                <p class="stock-label">
-                    ✓ In stock
-                </p>
+                <p class="stock-label">✓ In stock</p>
+                <p>Enjoy festival shopping with FESTIVALE. This product is part of our festival collection.</p>
 
-                <p>
-                    Enjoy festival shopping with
-                    FESTIVALE. This product is part
-                    of our festival collection.
-                </p>
+                <div class="detail-quantity-row">
+                    <span>Quantity</span>
+                    <div class="quantity-controls detail-quantity-controls">
+                        <button type="button" onclick="changeDetailQuantity(-1)">−</button>
+                        <span id="detailQuantity">1</span>
+                        <button type="button" onclick="changeDetailQuantity(1)">+</button>
+                    </div>
+                </div>
 
-                <button
-                    class="auth-primary auth-full"
-                    onclick="addToCart(${product.id}); closeModal();"
-                >
-                    Add to Cart
-                </button>
-
+                <div class="product-detail-actions">
+                    <button class="auth-primary" onclick="addProductWithQuantity(${product.id}); closeModal();">Add to Cart</button>
+                    <button class="auth-secondary" onclick="addProductWithQuantity(${product.id}); closeModal(); openCart();">Buy Now</button>
+                </div>
             </div>
-
         </div>
-
     `);
 
+    window.activeDetailProductId = product.id;
+    window.activeDetailQuantity = 1;
+}
+
+function changeDetailQuantity(change) {
+    window.activeDetailQuantity = Math.max(1, Number(window.activeDetailQuantity || 1) + change);
+    const element = document.getElementById("detailQuantity");
+    if (element) element.textContent = window.activeDetailQuantity;
+}
+
+function addProductWithQuantity(id) {
+    const product = products.find(item => item.id === id);
+    if (!product) return;
+
+    const quantity = Math.max(1, Number(window.activeDetailQuantity || 1));
+    const existing = cart.find(item => item.id === id);
+
+    if (existing) existing.quantity += quantity;
+    else cart.push({ id: product.id, quantity });
+
+    saveCart();
+    updateCartCount();
+    renderCart();
+    showToast(`${product.name} added to cart`);
 }
 
 
@@ -1559,10 +1549,23 @@ function renderCart() {
 
 
     if (subtotalElement) {
-
         subtotalElement.textContent =
             `₹${subtotal.toLocaleString("en-IN")}`;
+    }
 
+    const existingActions = document.getElementById("cartExtraActions");
+    if (existingActions) existingActions.remove();
+
+    const cartPanel = document.getElementById("cartContent");
+    if (cartPanel && cart.length) {
+        const actions = document.createElement("div");
+        actions.id = "cartExtraActions";
+        actions.className = "cart-extra-actions";
+        actions.innerHTML = `
+            <button type="button" class="auth-secondary" onclick="clearCart()">Clear Cart</button>
+            <button type="button" class="auth-primary" onclick="openCheckout()">Proceed to Checkout →</button>
+        `;
+        cartPanel.appendChild(actions);
     }
 
 }
@@ -1620,6 +1623,16 @@ function removeFromCart(id) {
 }
 
 
+function clearCart() {
+    if (!cart.length) return;
+    cart = [];
+    saveCart();
+    updateCartCount();
+    renderCart();
+    showToast("Cart cleared.");
+}
+
+
 /* =========================================================
    CHECKOUT
    ========================================================= */
@@ -1668,11 +1681,12 @@ function openCheckout() {
                 Complete Your Order
             </h2>
 
+
             <div class="checkout-box">
 
                 <div>
                     <span>Items</span>
-                    <strong>${cart.length}</strong>
+                    <strong>${cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}</strong>
                 </div>
 
                 <div>
@@ -1698,19 +1712,199 @@ function openCheckout() {
 
             </div>
 
-            <label class="form-group">
 
-                <span>
-                    Delivery Address
-                </span>
+            <span class="section-label">
+                DELIVERY DETAILS
+            </span>
 
-                <textarea
-                    id="checkoutAddress"
-                    placeholder="Enter your delivery address"
-                    rows="3"
-                ></textarea>
+            <div class="auth-form-grid">
 
-            </label>
+                <label class="auth-field">
+
+                    <span>
+                        Full Name *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>👤</span>
+
+                        <input
+                            id="checkoutName"
+                            type="text"
+                            placeholder="Enter recipient's full name"
+                            autocomplete="name"
+                            value="${escapeHtml(user?.name || "")}"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        Mobile Number *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>📱</span>
+
+                        <input
+                            id="checkoutPhone"
+                            type="tel"
+                            inputmode="numeric"
+                            maxlength="10"
+                            placeholder="10-digit mobile number"
+                            autocomplete="tel"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        House / Flat / Building *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>🏠</span>
+
+                        <input
+                            id="checkoutHouse"
+                            type="text"
+                            placeholder="Flat 402, Sunshine Apartments"
+                            autocomplete="address-line1"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        Area / Street / Locality *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>📍</span>
+
+                        <input
+                            id="checkoutArea"
+                            type="text"
+                            placeholder="MG Road, Andheri East"
+                            autocomplete="address-line2"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        Landmark
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>🧭</span>
+
+                        <input
+                            id="checkoutLandmark"
+                            type="text"
+                            placeholder="Near City Mall (optional)"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        City *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>🏙️</span>
+
+                        <input
+                            id="checkoutCity"
+                            type="text"
+                            placeholder="Mumbai"
+                            autocomplete="address-level2"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        State *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>🗺️</span>
+
+                        <input
+                            id="checkoutState"
+                            type="text"
+                            placeholder="Maharashtra"
+                            autocomplete="address-level1"
+                        >
+
+                    </div>
+
+                </label>
+
+
+                <label class="auth-field">
+
+                    <span>
+                        PIN Code *
+                    </span>
+
+                    <div class="auth-input-wrap">
+
+                        <span>📮</span>
+
+                        <input
+                            id="checkoutPincode"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="6"
+                            placeholder="400001"
+                            autocomplete="postal-code"
+                        >
+
+                    </div>
+
+                </label>
+
+            </div>
+
+
+            <p style="font-size:13px; color:#737b91; margin:8px 0 18px;">
+                * Required fields. Please enter your complete delivery address.
+            </p>
+
 
             <label class="form-group">
 
@@ -1736,6 +1930,7 @@ function openCheckout() {
 
             </label>
 
+
             <button
                 class="auth-primary auth-full"
                 onclick="checkout()"
@@ -1750,16 +1945,83 @@ function openCheckout() {
 }
 
 
+function buildCheckoutAddress() {
+
+    const name =
+        document.getElementById("checkoutName")?.value.trim();
+
+    const phone =
+        document.getElementById("checkoutPhone")?.value.trim();
+
+    const house =
+        document.getElementById("checkoutHouse")?.value.trim();
+
+    const area =
+        document.getElementById("checkoutArea")?.value.trim();
+
+    const landmark =
+        document.getElementById("checkoutLandmark")?.value.trim();
+
+    const city =
+        document.getElementById("checkoutCity")?.value.trim();
+
+    const state =
+        document.getElementById("checkoutState")?.value.trim();
+
+    const pincode =
+        document.getElementById("checkoutPincode")?.value.trim();
+
+
+    if (!name || !phone || !house || !area || !city || !state || !pincode) {
+
+        showToast("Please fill in all required delivery details.");
+
+        return null;
+
+    }
+
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+
+        showToast("Please enter a valid 10-digit Indian mobile number.");
+
+        return null;
+
+    }
+
+
+    if (!/^\d{6}$/.test(pincode)) {
+
+        showToast("Please enter a valid 6-digit PIN code.");
+
+        return null;
+
+    }
+
+
+    const lines = [
+        name,
+        phone,
+        house,
+        area,
+        landmark,
+        `${city}, ${state} - ${pincode}`
+    ].filter(Boolean);
+
+
+    return lines.join(", ");
+
+}
+
+
 async function checkout() {
 
-    const address =
-        document.getElementById("checkoutAddress")?.value.trim();
+    const address = buildCheckoutAddress();
 
     const payment =
         document.getElementById("paymentMethod")?.value;
 
     if (!address) {
-        showToast("Please enter your delivery address.");
         return;
     }
 
@@ -1830,6 +2092,14 @@ async function checkout() {
         orders = orders.filter(existing => existing.id !== order.id);
         orders.push(order);
         saveOrders();
+
+        if (!addresses.includes(address)) {
+            addresses.push(address);
+            localStorage.setItem(
+                "festivaleAddresses",
+                JSON.stringify(addresses)
+            );
+        }
 
         cart = [];
         saveCart();
@@ -2066,25 +2336,27 @@ async function showOrders() {
             `/api/v1/transactions?user_id=${encodeURIComponent(user.id)}&limit=50`
         );
 
+        const cachedById = new Map((orders || []).map(order => [order.id, order]));
+
         orders = (Array.isArray(backendOrders) ? backendOrders : []).map(function (order) {
+            const cached = cachedById.get(order.order_id) || {};
             return {
+                ...cached,
                 id: order.order_id,
-                date: order.created_at
-                    ? new Date(order.created_at).toLocaleString()
-                    : "",
+                date: order.created_at ? new Date(order.created_at).toLocaleString("en-IN") : (cached.date || ""),
                 total: Number(order.amount || 0),
                 payment: order.payment_method || "",
                 status: order.status || "completed",
                 backendId: order.id,
-                product: order.product,
-                itemsCount: order.items_count
+                product: order.product || cached.product || "",
+                itemsCount: order.items_count || cached.itemsCount || 0
             };
         });
 
         saveOrders();
 
         let content = `
-            <div class="info-card">
+            <div class="info-card order-history-header">
                 <div class="info-icon">📦</div>
                 <span class="auth-eyebrow">ORDER HISTORY</span>
                 <h2>My Orders</h2>
@@ -2098,23 +2370,29 @@ async function showOrders() {
                     <div class="empty-icon">📦</div>
                     <h3>No orders yet</h3>
                     <p>Your placed orders will appear here.</p>
+                    <button class="auth-primary" onclick="closeModal(); goHome();">Start Shopping →</button>
                 </div>
             `;
         } else {
             orders.forEach(function (order) {
+                const status = String(order.status || "completed").toLowerCase();
                 content += `
-                    <div class="order-card">
-                        <div>
-                            <strong>Order ${escapeHtml(order.id || "—")}</strong>
-                            <p>${escapeHtml(order.date || "")}</p>
-                            <p>${escapeHtml(order.product || "")}</p>
+                    <button type="button" class="order-card order-card-clickable" onclick="showOrderDetails('${escapeHtml(order.id || "")}')">
+                        <div class="order-card-main">
+                            <div class="order-card-icon">📦</div>
+                            <div>
+                                <strong>Order ${escapeHtml(order.id || "—")}</strong>
+                                <p>${escapeHtml(order.date || "")}</p>
+                                <p class="order-product-preview">${escapeHtml(order.product || "")}</p>
+                            </div>
                         </div>
-                        <div>
-                            <strong>₹${Number(order.total).toLocaleString("en-IN")}</strong>
-                            <p>${escapeHtml(order.status)}</p>
-                            <p>${escapeHtml(order.payment || "")}</p>
+                        <div class="order-card-side">
+                            <strong>₹${Number(order.total || 0).toLocaleString("en-IN")}</strong>
+                            <span class="order-status ${status === "completed" ? "success" : ""}">${escapeHtml(order.status || "completed")}</span>
+                            <small>${escapeHtml(order.payment || "")}</small>
+                            <span class="order-view-link">View Details →</span>
                         </div>
-                    </div>
+                    </button>
                 `;
             });
         }
@@ -2123,19 +2401,80 @@ async function showOrders() {
 
     } catch (error) {
         console.error("Could not load orders:", error);
-
         openModal(`
             <div class="info-card">
                 <div class="info-icon">⚠️</div>
                 <span class="auth-eyebrow">ORDER HISTORY</span>
                 <h2>Could not load orders</h2>
                 <p>${escapeHtml(error.message)}</p>
-                <button class="auth-primary auth-full" onclick="showOrders()">
-                    Try Again
-                </button>
+                <button class="auth-primary auth-full" onclick="showOrders()">Try Again</button>
             </div>
         `);
     }
+}
+
+function showOrderDetails(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order) {
+        showToast("Order details are unavailable.");
+        return;
+    }
+
+    const address = order.address || "Delivery address saved with this order";
+    const status = String(order.status || "completed").toLowerCase();
+
+    openModal(`
+        <div class="order-details-page">
+            <div class="order-details-top">
+                <button class="back-link" onclick="showOrders()">← Back to My Orders</button>
+                <span class="order-status success">${escapeHtml(order.status || "completed")}</span>
+            </div>
+
+            <div class="order-details-heading">
+                <div class="info-icon">📦</div>
+                <div>
+                    <span class="auth-eyebrow">ORDER DETAILS</span>
+                    <h2>${escapeHtml(order.id || "Order")}</h2>
+                    <p>Placed on ${escapeHtml(order.date || "")}</p>
+                </div>
+            </div>
+
+            <div class="order-details-grid">
+                <section class="order-detail-section">
+                    <h3>Items</h3>
+                    <div class="detail-line">
+                        <span>${escapeHtml(order.product || "Festival products")}</span>
+                        <strong>${order.itemsCount || 1} item${Number(order.itemsCount || 1) === 1 ? "" : "s"}</strong>
+                    </div>
+                </section>
+
+                <section class="order-detail-section">
+                    <h3>Delivery Address</h3>
+                    <p class="formatted-address">${escapeHtml(address).replace(/\n/g, "<br>")}</p>
+                </section>
+
+                <section class="order-detail-section">
+                    <h3>Payment</h3>
+                    <div class="detail-line">
+                        <span>Payment method</span>
+                        <strong>${escapeHtml(order.payment || "—")}</strong>
+                    </div>
+                    <div class="detail-line total-line">
+                        <span>Total</span>
+                        <strong>₹${Number(order.total || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                </section>
+            </div>
+
+            <div class="order-progress">
+                <div class="progress-step active"><span>✓</span><strong>Order Placed</strong></div>
+                <div class="progress-line ${status === "completed" ? "active" : ""}"></div>
+                <div class="progress-step ${status === "completed" ? "active" : ""}"><span>${status === "completed" ? "✓" : "2"}</span><strong>Confirmed</strong></div>
+                <div class="progress-line"></div>
+                <div class="progress-step"><span>3</span><strong>Delivered</strong></div>
+            </div>
+        </div>
+    `);
 }
 
 
@@ -3603,6 +3942,71 @@ function updateAccountGreeting() {
 
     }
 
+}
+
+
+/* =========================================================
+   FRONTEND POLISH / RESPONSIVE UI
+   ========================================================= */
+
+function installFrontendPolish() {
+    if (document.getElementById("festivaleFrontendPolish")) return;
+
+    const style = document.createElement("style");
+    style.id = "festivaleFrontendPolish";
+    style.textContent = `
+        .enhanced-product-detail { display:grid; grid-template-columns:minmax(280px,1fr) minmax(280px,1fr); gap:28px; align-items:center; }
+        .enhanced-product-detail img { width:100%; max-height:460px; object-fit:cover; border-radius:18px; }
+        .detail-quantity-row { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:22px 0; padding:14px 0; border-top:1px solid rgba(0,0,0,.08); border-bottom:1px solid rgba(0,0,0,.08); }
+        .detail-quantity-controls { display:flex; align-items:center; gap:12px; }
+        .product-detail-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .cart-extra-actions { display:grid; grid-template-columns:1fr 1.4fr; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid rgba(0,0,0,.08); }
+        .order-card-clickable { width:100%; text-align:left; border:0; cursor:pointer; display:flex; justify-content:space-between; gap:18px; align-items:center; }
+        .order-card-main { display:flex; align-items:center; gap:14px; min-width:0; }
+        .order-card-icon { width:46px; height:46px; display:grid; place-items:center; border-radius:12px; background:rgba(0,0,0,.05); flex:0 0 auto; }
+        .order-product-preview { max-width:460px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .order-card-side { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto; }
+        .order-status { display:inline-flex; padding:4px 9px; border-radius:999px; background:rgba(0,0,0,.07); font-size:.82rem; }
+        .order-status.success { background:rgba(34,197,94,.12); color:#15803d; }
+        .order-view-link { font-size:.82rem; opacity:.75; }
+        .order-details-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:22px; }
+        .back-link { border:0; background:none; cursor:pointer; font:inherit; padding:4px 0; opacity:.8; }
+        .order-details-heading { display:flex; gap:16px; align-items:center; margin-bottom:24px; }
+        .order-details-heading h2 { margin:4px 0; }
+        .order-details-grid { display:grid; gap:14px; }
+        .order-detail-section { padding:18px; border:1px solid rgba(0,0,0,.08); border-radius:14px; }
+        .order-detail-section h3 { margin:0 0 12px; }
+        .detail-line { display:flex; justify-content:space-between; gap:16px; padding:7px 0; }
+        .total-line { margin-top:8px; padding-top:14px; border-top:1px solid rgba(0,0,0,.08); font-size:1.05rem; }
+        .formatted-address { line-height:1.65; margin:0; white-space:normal; }
+        .order-progress { display:flex; align-items:center; gap:8px; margin-top:22px; overflow-x:auto; padding:8px 2px; }
+        .progress-step { display:flex; flex-direction:column; align-items:center; gap:5px; min-width:82px; text-align:center; opacity:.45; font-size:.78rem; }
+        .progress-step span { width:30px; height:30px; display:grid; place-items:center; border-radius:50%; background:rgba(0,0,0,.08); }
+        .progress-step.active { opacity:1; }
+        .progress-step.active span { background:#16a34a; color:white; }
+        .progress-line { height:2px; min-width:35px; flex:1; background:rgba(0,0,0,.12); }
+        .progress-line.active { background:#16a34a; }
+        .frontend-loading { display:grid; place-items:center; min-height:150px; text-align:center; }
+        .frontend-loading .spinner { width:34px; height:34px; border:3px solid rgba(0,0,0,.12); border-top-color:currentColor; border-radius:50%; animation:festivaleSpin .8s linear infinite; margin-bottom:10px; }
+        @keyframes festivaleSpin { to { transform:rotate(360deg); } }
+        @media (max-width: 700px) {
+            .enhanced-product-detail { grid-template-columns:1fr; gap:18px; }
+            .enhanced-product-detail img { max-height:300px; }
+            .product-detail-actions, .cart-extra-actions { grid-template-columns:1fr; }
+            .order-card-clickable { align-items:flex-start; flex-direction:column; }
+            .order-card-side { align-items:flex-start; }
+            .order-details-top { align-items:flex-start; flex-direction:column; }
+            .order-details-heading { align-items:flex-start; }
+            .detail-line { flex-direction:column; gap:3px; }
+            .order-progress { justify-content:flex-start; }
+        }
+        @media (max-width: 480px) {
+            .order-card-main { align-items:flex-start; }
+            .order-card-icon { width:38px; height:38px; }
+            .order-product-preview { max-width:240px; }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 
