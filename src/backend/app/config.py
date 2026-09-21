@@ -3,9 +3,13 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_env_file_path = os.path.join(_backend_dir, ".env")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(_env_file_path, ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"
@@ -46,7 +50,7 @@ class Settings(BaseSettings):
     AI_TIMEOUT_SECONDS: float = 3.0
 
     # AWS Auto Scaling Group Integration
-    AWS_REGION: str = "us-east-1"
+    AWS_REGION: str = "ap-south-1"
     AWS_ASG_NAME: str = "ecommerce-festival-asg"
     AWS_MOCK_MODE: bool = True
     AWS_ACCESS_KEY_ID: Optional[str] = None
@@ -57,6 +61,13 @@ class Settings(BaseSettings):
         Returns the active SQLAlchemy database URL.
         Falls back to local SQLite if USE_SQLITE is True or no RDS config is present.
         """
+        if self.USE_SQLITE:
+            if self.SQLITE_PATH == ":memory:":
+                return "sqlite:///:memory:"
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            db_path = os.path.join(base_dir, self.SQLITE_PATH)
+            return f"sqlite:///{db_path}"
+
         if self.DATABASE_URL:
             url = self.DATABASE_URL
             if url.startswith("postgres://"):
@@ -64,13 +75,6 @@ class Settings(BaseSettings):
             elif url.startswith("postgresql://") and "+psycopg2" not in url:
                 url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
             return url
-
-        if self.USE_SQLITE:
-            if self.SQLITE_PATH == ":memory:":
-                return "sqlite:///:memory:"
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            db_path = os.path.join(base_dir, self.SQLITE_PATH)
-            return f"sqlite:///{db_path}"
 
         # Default RDS PostgreSQL connection string
         return (
