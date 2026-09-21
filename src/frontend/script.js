@@ -6,11 +6,27 @@
    DATA
    ========================================================= */
 
+const API_BASE_URL = "http://127.0.0.1:8000";
+const AUTH_TOKEN_KEY = "festivaleAuthToken";
+
 let cart = JSON.parse(localStorage.getItem("festivaleCart")) || [];
 let orders = JSON.parse(localStorage.getItem("festivaleOrders")) || [];
 let wishlist = JSON.parse(localStorage.getItem("festivaleWishlist")) || [];
 let addresses = JSON.parse(localStorage.getItem("festivaleAddresses")) || [];
-let user = JSON.parse(localStorage.getItem("festivaleUser")) || null;
+
+let authToken =
+    localStorage.getItem(AUTH_TOKEN_KEY) ||
+    sessionStorage.getItem(AUTH_TOKEN_KEY) ||
+    null;
+
+let user = authToken
+    ? JSON.parse(localStorage.getItem("festivaleUser") || "null")
+    : null;
+
+if (!authToken) {
+    localStorage.removeItem("festivaleUser");
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+}
 
 const products = [
     {
@@ -358,7 +374,7 @@ let currentProducts = [...products];
    INITIALIZATION
    ========================================================= */
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
 
     setupFilters();
 
@@ -366,9 +382,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateCartCount();
 
-    updateAccountGreeting();
-
     updateProductCount();
+
+    await restoreAuthSession();
+
+    updateAccountGreeting();
 
 });
 
@@ -385,9 +403,22 @@ function saveCart() {
 }
 
 function saveUser() {
+    if (!user) {
+        localStorage.removeItem("festivaleUser");
+        return;
+    }
+
+    const safeUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        is_active: user.is_active,
+        createdAt: user.createdAt
+    };
+
     localStorage.setItem(
         "festivaleUser",
-        JSON.stringify(user)
+        JSON.stringify(safeUser)
     );
 }
 
@@ -464,8 +495,176 @@ function showToast(message) {
 
 
 /* =========================================================
+   BACKEND AUTHENTICATION
+   ========================================================= */
+
+async function apiRequest(path, options = {}) {
+
+    const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+    };
+
+    if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(
+        `${API_BASE_URL}${path}`,
+        {
+            ...options,
+            headers
+        }
+    );
+
+    let data = null;
+
+    try {
+        data = await response.json();
+    } catch {
+        data = null;
+    }
+
+    if (!response.ok) {
+        const detail =
+            data?.detail ||
+            data?.message ||
+            `Request failed (${response.status})`;
+
+        throw new Error(
+            typeof detail === "string"
+                ? detail
+                : "Request failed"
+        );
+    }
+
+    return data;
+}
+
+
+function storeAuthToken(token, rememberMe = true) {
+
+    authToken = token;
+
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+
+    if (rememberMe) {
+        localStorage.setItem(
+            AUTH_TOKEN_KEY,
+            token
+        );
+    } else {
+        sessionStorage.setItem(
+            AUTH_TOKEN_KEY,
+            token
+        );
+    }
+}
+
+
+function storeBackendUser(data) {
+
+    user = {
+        id: data.id,
+        name: data.full_name,
+        email: data.email,
+        is_active: data.is_active,
+        createdAt: data.created_at
+    };
+
+    saveUser();
+    updateAccountGreeting();
+}
+
+
+async function restoreAuthSession() {
+
+    if (!authToken) {
+        user = null;
+        return;
+    }
+
+    try {
+
+        const profile =
+            await apiRequest(
+                "/api/v1/auth/me"
+            );
+
+        storeBackendUser(profile);
+
+    } catch (error) {
+
+        console.warn(
+            "Backend session could not be restored:",
+            error.message
+        );
+
+        authToken = null;
+        user = null;
+
+        localStorage.removeItem(
+            AUTH_TOKEN_KEY
+        );
+
+        sessionStorage.removeItem(
+            AUTH_TOKEN_KEY
+        );
+
+        localStorage.removeItem(
+            "festivaleUser"
+        );
+
+    }
+
+}
+
+
+async function loginWithBackend(
+    email,
+    password,
+    rememberMe = true
+) {
+
+    const response =
+        await apiRequest(
+            "/api/v1/auth/login",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            }
+        );
+
+    if (!response?.access_token) {
+        throw new Error(
+            "Login succeeded but no access token was returned."
+        );
+    }
+
+    storeAuthToken(
+        response.access_token,
+        rememberMe
+    );
+
+    const profile =
+        await apiRequest(
+            "/api/v1/auth/me"
+        );
+
+    storeBackendUser(profile);
+
+    return profile;
+}
+
+
+/* =========================================================
    PRODUCT DISPLAY
    ========================================================= */
+
 
 function renderProducts(list = currentProducts) {
 
@@ -2406,165 +2605,149 @@ function showCreateAccount() {
    CREATE ACCOUNT ACTION
    ========================================================= */
 
-function createAccount() {
+async function createAccount() {
 
     const name =
         document.getElementById(
             "accountName"
         )?.value.trim();
 
-
     const email =
         document.getElementById(
             "accountEmail"
         )?.value.trim().toLowerCase();
-
 
     const password =
         document.getElementById(
             "accountPassword"
         )?.value || "";
 
-
     const confirm =
         document.getElementById(
             "accountPasswordConfirm"
         )?.value || "";
-
 
     const terms =
         document.getElementById(
             "accountTerms"
         )?.checked;
 
-
-    if (
-        !name ||
-        !email ||
-        !password ||
-        !confirm
-    ) {
-
-        showToast(
-            "Please complete all fields."
-        );
-
+    if (!name || !email || !password || !confirm) {
+        showToast("Please complete all fields.");
         return;
-
     }
 
-
-    if (
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            .test(email)
-    ) {
-
-        showToast(
-            "Please enter a valid email address."
-        );
-
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showToast("Please enter a valid email address.");
         return;
-
     }
-
 
     if (password.length < 8) {
-
-        showToast(
-            "Password must contain at least 8 characters."
-        );
-
+        showToast("Password must contain at least 8 characters.");
         return;
-
     }
 
-
-    if (
-        !/[A-Za-z]/.test(password) ||
-        !/\d/.test(password)
-    ) {
-
-        showToast(
-            "Use at least one letter and one number."
-        );
-
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+        showToast("Use at least one letter and one number.");
         return;
-
     }
-
 
     if (password !== confirm) {
-
-        showToast(
-            "Passwords do not match."
-        );
-
+        showToast("Passwords do not match.");
         return;
-
     }
-
 
     if (!terms) {
-
-        showToast(
-            "Please accept the Terms & Conditions."
-        );
-
+        showToast("Please accept the Terms & Conditions.");
         return;
-
     }
 
+    const button =
+        document.querySelector(".auth-primary.auth-full");
 
-    user = {
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Creating account...";
+    }
 
-        name: name,
+    try {
 
-        email: email,
+        await apiRequest(
+            "/api/v1/auth/register",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    full_name: name
+                })
+            }
+        );
 
-        password: password,
+        await loginWithBackend(
+            email,
+            password,
+            true
+        );
 
-        createdAt:
-            new Date().toISOString()
+        openModal(`
 
-    };
+            <div class="auth-success">
 
+                <div class="success-circle">
+                    ✓
+                </div>
 
-    saveUser();
+                <span class="auth-eyebrow">
+                    ACCOUNT CREATED
+                </span>
 
-    updateAccountGreeting();
+                <h2>
+                    Welcome, ${escapeHtml(name)}!
+                </h2>
 
+                <p>
+                    Your FESTIVALE account is ready.
+                    Your account has been securely created
+                    on the FESTIVALE backend.
+                </p>
 
-    openModal(`
+                <button
+                    class="auth-primary auth-full"
+                    onclick="showAccountDashboard()"
+                >
+                    Start Shopping →
+                </button>
 
-        <div class="auth-success">
-
-            <div class="success-circle">
-                ✓
             </div>
 
-            <span class="auth-eyebrow">
-                ACCOUNT CREATED
-            </span>
+        `);
 
-            <h2>
-                Welcome, ${escapeHtml(name)}!
-            </h2>
+    } catch (error) {
 
-            <p>
-                Your FESTIVALE account is ready.
-                Start exploring your festival favourites.
-            </p>
+        console.error(
+            "Registration error:",
+            error
+        );
 
-            <button
-                class="auth-primary auth-full"
-                onclick="showAccountDashboard()"
-            >
-                Start Shopping →
-            </button>
+        let message = error.message;
 
-        </div>
+        if (
+            message.toLowerCase().includes("already") ||
+            message.toLowerCase().includes("exist")
+        ) {
+            message =
+                "An account with this email already exists. Please sign in.";
+        }
 
-    `);
+        showToast(message);
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Create My Account →";
+        }
+
+    }
 
 }
 
@@ -2714,102 +2897,100 @@ function showSignIn() {
 }
 
 
-function signIn() {
+async function signIn() {
 
     const email =
         document.getElementById(
             "signInEmail"
         )?.value.trim().toLowerCase();
 
-
     const password =
         document.getElementById(
             "signInPassword"
         )?.value || "";
 
+    const rememberMe =
+        document.getElementById(
+            "rememberMe"
+        )?.checked ?? true;
 
     if (!email || !password) {
-
         showToast(
             "Please enter your email and password."
         );
-
         return;
-
     }
 
-
-    const savedUser =
-        JSON.parse(
-            localStorage.getItem(
-                "festivaleUser"
-            ) || "null"
+    const button =
+        document.querySelector(
+            ".auth-primary.auth-full"
         );
 
-
-    if (!savedUser) {
-
-        showToast(
-            "No account found. Please create an account first."
-        );
-
-        return;
-
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Signing in...";
     }
 
+    try {
 
-    if (
-        savedUser.email.toLowerCase() !== email ||
-        savedUser.password !== password
-    ) {
+        const profile =
+            await loginWithBackend(
+                email,
+                password,
+                rememberMe
+            );
+
+        openModal(`
+
+            <div class="auth-success">
+
+                <div class="success-circle">
+                    ✓
+                </div>
+
+                <span class="auth-eyebrow">
+                    SIGNED IN
+                </span>
+
+                <h2>
+                    Welcome back,
+                    ${escapeHtml(profile.full_name)}!
+                </h2>
+
+                <p>
+                    You are securely signed in.
+                    Your orders, wishlist and account
+                    are now connected to FESTIVALE.
+                </p>
+
+                <button
+                    class="auth-primary auth-full"
+                    onclick="showAccountDashboard()"
+                >
+                    Go to My Account →
+                </button>
+
+            </div>
+
+        `);
+
+    } catch (error) {
+
+        console.error(
+            "Login error:",
+            error
+        );
 
         showToast(
             "Incorrect email or password."
         );
 
-        return;
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Sign In →";
+        }
 
     }
-
-
-    user = savedUser;
-
-    updateAccountGreeting();
-
-
-    openModal(`
-
-        <div class="auth-success">
-
-            <div class="success-circle">
-                ✓
-            </div>
-
-            <span class="auth-eyebrow">
-                SIGNED IN
-            </span>
-
-            <h2>
-                Welcome back,
-                ${escapeHtml(savedUser.name)}!
-            </h2>
-
-            <p>
-                Your account is ready.
-                You can now access your orders
-                and wishlist.
-            </p>
-
-            <button
-                class="auth-primary auth-full"
-                onclick="showAccountDashboard()"
-            >
-                Go to My Account →
-            </button>
-
-        </div>
-
-    `);
 
 }
 
@@ -3183,7 +3364,16 @@ function saveProfile() {
 
 function logout() {
 
+    authToken = null;
     user = null;
+
+    localStorage.removeItem(
+        AUTH_TOKEN_KEY
+    );
+
+    sessionStorage.removeItem(
+        AUTH_TOKEN_KEY
+    );
 
     localStorage.removeItem(
         "festivaleUser"
