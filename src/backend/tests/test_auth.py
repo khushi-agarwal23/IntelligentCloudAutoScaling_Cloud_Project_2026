@@ -45,6 +45,18 @@ def test_user_login_invalid_password(client, test_user):
     assert response.status_code == 401
 
 
+def test_oauth2_token_endpoint_for_swagger(client, test_user):
+    """Tests the /token endpoint that Swagger Authorize button uses (form data)."""
+    response = client.post(
+        "/api/v1/auth/token",
+        data={"username": test_user.email, "password": "securepassword123"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
+
 def test_get_current_user_me(client, auth_headers, test_user):
     response = client.get("/api/v1/auth/me", headers=auth_headers)
     assert response.status_code == 200
