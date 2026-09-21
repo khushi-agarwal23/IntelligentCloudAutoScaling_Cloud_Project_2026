@@ -1750,141 +1750,121 @@ function openCheckout() {
 }
 
 
-function checkout() {
+async function checkout() {
 
     const address =
-        document.getElementById(
-            "checkoutAddress"
-        )?.value.trim();
-
+        document.getElementById("checkoutAddress")?.value.trim();
 
     const payment =
-        document.getElementById(
-            "paymentMethod"
-        )?.value;
-
+        document.getElementById("paymentMethod")?.value;
 
     if (!address) {
-
-        showToast(
-            "Please enter your delivery address."
-        );
-
+        showToast("Please enter your delivery address.");
         return;
-
     }
 
-
-    if (!user) {
-
-        showToast(
-            "Please create an account first."
-        );
-
+    if (!user || !authToken) {
+        showToast("Please sign in before checkout.");
         return;
-
     }
 
+    if (!cart.length) {
+        showToast("Your cart is empty.");
+        return;
+    }
 
     let total = 0;
-
+    let itemCount = 0;
+    const productNames = [];
 
     cart.forEach(function (item) {
-
-        const product =
-            products.find(
-                p => p.id === item.id
-            );
+        const product = products.find(p => p.id === item.id);
 
         if (product) {
-
-            total +=
-                product.price *
-                item.quantity;
-
+            total += Number(product.price) * Number(item.quantity);
+            itemCount += Number(item.quantity);
+            productNames.push(`${product.name} x${item.quantity}`);
         }
-
     });
 
+    if (itemCount === 0 || total <= 0) {
+        showToast("Your cart contains no valid products.");
+        return;
+    }
 
-    const order = {
+    const button = document.querySelector(".checkout-summary .auth-primary");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Placing Order...";
+    }
 
-        id:
-            "FV" +
-            Date.now()
-                .toString()
-                .slice(-8),
+    try {
+        const transaction = await apiRequest(
+            "/api/v1/transactions/checkout",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    user_id: user.id,
+                    product: productNames.join(", "),
+                    amount: total,
+                    items_count: itemCount,
+                    payment_method: payment
+                })
+            }
+        );
 
-        date:
-            new Date()
-                .toLocaleString(),
+        const order = {
+            id: transaction.order_id,
+            date: transaction.created_at
+                ? new Date(transaction.created_at).toLocaleString()
+                : new Date().toLocaleString(),
+            total: Number(transaction.amount ?? total),
+            payment: transaction.payment_method ?? payment,
+            address: address,
+            items: [...cart],
+            status: transaction.status ?? "completed",
+            backendId: transaction.id,
+            product: transaction.product
+        };
 
-        total: total,
+        orders = orders.filter(existing => existing.id !== order.id);
+        orders.push(order);
+        saveOrders();
 
-        payment: payment,
+        cart = [];
+        saveCart();
+        updateCartCount();
+        renderCart();
+        closeCart();
 
-        address: address,
-
-        items:
-            [...cart],
-
-        status:
-            "Order Placed"
-
-    };
-
-
-    orders.push(order);
-
-    saveOrders();
-
-
-    cart = [];
-
-    saveCart();
-
-    updateCartCount();
-
-    closeCart();
-
-
-    openModal(`
-
-        <div class="auth-success">
-
-            <div class="success-circle">
-                ✓
+        openModal(`
+            <div class="auth-success">
+                <div class="success-circle">✓</div>
+                <span class="auth-eyebrow">ORDER CONFIRMED</span>
+                <h2>Thank you, ${escapeHtml(user.name)}!</h2>
+                <p>Your order has been placed successfully.</p>
+                <p>Order ID: <strong>${escapeHtml(order.id)}</strong></p>
+                <p>Total: <strong>₹${order.total.toLocaleString("en-IN")}</strong></p>
+                <button
+                    class="auth-primary auth-full"
+                    onclick="closeModal()"
+                >
+                    Continue Shopping →
+                </button>
             </div>
+        `);
 
-            <span class="auth-eyebrow">
-                ORDER CONFIRMED
-            </span>
+    } catch (error) {
+        console.error("Checkout failed:", error);
+        showToast(`Checkout failed: ${error.message}`);
 
-            <h2>
-                Thank you, ${escapeHtml(user.name)}!
-            </h2>
-
-            <p>
-                Your order has been placed successfully.
-            </p>
-
-            <p>
-                Order ID:
-                <strong>${order.id}</strong>
-            </p>
-
-            <button
-                class="auth-primary auth-full"
-                onclick="closeModal()"
-            >
-                Continue Shopping →
-            </button>
-
-        </div>
-
-    `);
-
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Place Order →";
+        }
+    }
 }
+
 
 
 /* =========================================================
@@ -2065,105 +2045,99 @@ function showWishlist() {
    ORDERS
    ========================================================= */
 
-function showOrders() {
+async function showOrders() {
 
-    if (!user) {
-
+    if (!user || !authToken) {
         openAccount();
-
         return;
-
     }
 
-
-    let content = `
-
+    openModal(`
         <div class="info-card">
-
-            <div class="info-icon">
-                📦
-            </div>
-
-            <span class="auth-eyebrow">
-                ORDER HISTORY
-            </span>
-
-            <h2>
-                My Orders
-            </h2>
-
+            <div class="info-icon">📦</div>
+            <span class="auth-eyebrow">ORDER HISTORY</span>
+            <h2>My Orders</h2>
+            <p>Loading your orders...</p>
         </div>
+    `);
 
-    `;
+    try {
+        const backendOrders = await apiRequest(
+            `/api/v1/transactions?user_id=${encodeURIComponent(user.id)}&limit=50`
+        );
 
+        orders = (Array.isArray(backendOrders) ? backendOrders : []).map(function (order) {
+            return {
+                id: order.order_id,
+                date: order.created_at
+                    ? new Date(order.created_at).toLocaleString()
+                    : "",
+                total: Number(order.amount || 0),
+                payment: order.payment_method || "",
+                status: order.status || "completed",
+                backendId: order.id,
+                product: order.product,
+                itemsCount: order.items_count
+            };
+        });
 
-    if (!orders.length) {
+        saveOrders();
 
-        content += `
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-                    📦
-                </div>
-
-                <h3>
-                    No orders yet
-                </h3>
-
-                <p>
-                    Your placed orders will appear here.
-                </p>
-
+        let content = `
+            <div class="info-card">
+                <div class="info-icon">📦</div>
+                <span class="auth-eyebrow">ORDER HISTORY</span>
+                <h2>My Orders</h2>
+                <p>${orders.length} order${orders.length === 1 ? "" : "s"} found.</p>
             </div>
-
         `;
 
-    }
-
-    else {
-
-        orders
-            .slice()
-            .reverse()
-            .forEach(function (order) {
-
+        if (!orders.length) {
+            content += `
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <h3>No orders yet</h3>
+                    <p>Your placed orders will appear here.</p>
+                </div>
+            `;
+        } else {
+            orders.forEach(function (order) {
                 content += `
-
                     <div class="order-card">
-
                         <div>
-                            <strong>
-                                Order ${order.id}
-                            </strong>
-
-                            <p>
-                                ${order.date}
-                            </p>
+                            <strong>Order ${escapeHtml(order.id || "—")}</strong>
+                            <p>${escapeHtml(order.date || "")}</p>
+                            <p>${escapeHtml(order.product || "")}</p>
                         </div>
-
                         <div>
-                            <strong>
-                                ₹${Number(order.total).toLocaleString("en-IN")}
-                            </strong>
-
-                            <p>
-                                ${order.status}
-                            </p>
+                            <strong>₹${Number(order.total).toLocaleString("en-IN")}</strong>
+                            <p>${escapeHtml(order.status)}</p>
+                            <p>${escapeHtml(order.payment || "")}</p>
                         </div>
-
                     </div>
-
                 `;
-
             });
+        }
 
+        openModal(content);
+
+    } catch (error) {
+        console.error("Could not load orders:", error);
+
+        openModal(`
+            <div class="info-card">
+                <div class="info-icon">⚠️</div>
+                <span class="auth-eyebrow">ORDER HISTORY</span>
+                <h2>Could not load orders</h2>
+                <p>${escapeHtml(error.message)}</p>
+                <button class="auth-primary auth-full" onclick="showOrders()">
+                    Try Again
+                </button>
+            </div>
+        `);
     }
-
-
-    openModal(content);
-
 }
+
 
 
 /* =========================================================
