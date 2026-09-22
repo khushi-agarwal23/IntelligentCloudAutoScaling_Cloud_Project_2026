@@ -4427,157 +4427,585 @@ let autoTrafficTimer = null;
 
 function setTraffic(level) {
 
-    const data =
-        trafficData[level];
-
+    const data = trafficData[level];
 
     if (!data) return;
 
+    window.currentTrafficLevel = level;
 
+    // IMPORTANT: setTraffic only updates the visual traffic dashboard.
+    // It does NOT call the scaling API. This prevents the automatic
+    // traffic simulator from overwriting a manual scaling evaluation.
     const ids = {
-
         requestRate: data.request,
-
         cpuUsage: data.cpu + "%",
-
         responseTime: data.response + " ms",
-
         activeUsers: data.users,
-
-        scalingDecision: data.decision,
-
-        decisionText: data.action,
-
-        decisionReason: data.reason,
-
-        trafficLevel:
-            level.toUpperCase(),
-
-        recommendedAction:
-            data.action
-
+        trafficLevel: level.toUpperCase()
     };
 
+    Object.keys(ids).forEach(function (id) {
 
-    Object.keys(ids).forEach(
-        function (id) {
+        const element = document.getElementById(id);
 
-            const element =
-                document.getElementById(id);
-
-            if (element) {
-
-                element.textContent =
-                    ids[id];
-
-            }
-
+        if (element) {
+            element.textContent = ids[id];
         }
-    );
 
+    });
 
-    const cpuBar =
-        document.getElementById(
-            "cpuBar"
-        );
+    const cpuBar = document.getElementById("cpuBar");
 
     if (cpuBar) {
-
-        cpuBar.style.width =
-            data.cpu + "%";
-
+        cpuBar.style.width = Math.min(data.cpu, 100) + "%";
     }
 
-
-    const requestBar =
-        document.getElementById(
-            "requestBar"
-        );
+    const requestBar = document.getElementById("requestBar");
 
     if (requestBar) {
-
         requestBar.style.width =
-            Math.min(
-                data.request / 2.5,
-                100
-            ) + "%";
-
+            Math.min((data.request / 250) * 100, 100) + "%";
     }
 
-
-    const responseBar =
-        document.getElementById(
-            "responseBar"
-        );
+    const responseBar = document.getElementById("responseBar");
 
     if (responseBar) {
-
         responseBar.style.width =
-            Math.min(
-                data.response / 5,
-                100
-            ) + "%";
-
+            Math.min((data.response / 1000) * 100, 100) + "%";
     }
 
-
-    const usersBar =
-        document.getElementById(
-            "usersBar"
-        );
+    const usersBar = document.getElementById("usersBar");
 
     if (usersBar) {
-
         usersBar.style.width =
-            Math.min(
-                data.users / 16,
-                100
-            ) + "%";
+            Math.min((data.users / 1600) * 100, 100) + "%";
+    }
+
+}
+
+
+async function evaluateTrafficSimulation(level) {
+
+    const data = trafficData[level];
+
+    if (!data) return;
+
+    // Update the traffic visuals first. The API call is explicit here,
+    // so manual Evaluate Scaling can never be triggered by setTraffic().
+    setTraffic(level);
+
+    return evaluateCloudScaling({
+        cpu_percent: data.cpu,
+        memory_percent: Math.min(data.cpu + 5, 95),
+        request_rate: data.request,
+        response_time_ms: data.response,
+        current_instances: getCloudCurrentInstances(),
+        apply_to_aws: true,
+        source: "traffic_simulation"
+    });
+
+}
+
+
+/* =========================================================
+   CLOUD AUTO-SCALING INTEGRATION
+   ========================================================= */
+
+let cloudCurrentInstances = 2;
+let cloudLastScalingResult = null;
+let cloudHistoryLoaded = false;
+
+// Every evaluation gets a sequence number. If an older automatic
+// simulation request finishes after a newer manual evaluation, its
+// result is ignored so it cannot overwrite the manual result.
+let cloudEvaluationSequence = 0;
+
+function getCloudCurrentInstances() {
+
+    const input =
+        document.getElementById("cloudInstances");
+
+    const inputValue =
+        input ? Number(input.value) : NaN;
+
+    if (Number.isFinite(inputValue) && inputValue >= 1) {
+        cloudCurrentInstances = Math.max(1, Math.min(50, inputValue));
+    }
+
+    return cloudCurrentInstances;
+}
+
+
+function setCloudCurrentInstances(value) {
+
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return;
+    }
+
+    cloudCurrentInstances =
+        Math.max(1, Math.min(50, Math.round(parsed)));
+
+    const input =
+        document.getElementById("cloudInstances");
+
+    if (input) {
+        input.value = cloudCurrentInstances;
+    }
+
+    const display =
+        document.getElementById("cloudCurrentInstances");
+
+    if (display) {
+        display.textContent = cloudCurrentInstances;
+    }
+
+}
+
+
+function formatScalingAction(action) {
+
+    return String(action || "maintain")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, function (letter) {
+            return letter.toUpperCase();
+        });
+
+}
+
+
+function getScalingDecisionClass(action) {
+
+    const normalized =
+        String(action || "maintain").toLowerCase();
+
+    if (normalized === "scale_up") {
+        return "scale-up";
+    }
+
+    if (normalized === "scale_down") {
+        return "scale-down";
+    }
+
+    return "maintain";
+}
+
+
+async function evaluateCloudScaling(overrides = {}) {
+
+    const cpuElement =
+        document.getElementById("cloudCpu");
+
+    const memoryElement =
+        document.getElementById("cloudMemory");
+
+    const requestElement =
+        document.getElementById("cloudRequests");
+
+    const latencyElement =
+        document.getElementById("cloudLatency");
+
+    const instanceElement =
+        document.getElementById("cloudInstances");
+
+    const cpu =
+        Number(overrides.cpu_percent ??
+            cpuElement?.value ?? 50);
+
+    const memory =
+        Number(overrides.memory_percent ??
+            memoryElement?.value ?? 50);
+
+    const requestRate =
+        Number(overrides.request_rate ??
+            requestElement?.value ?? 80);
+
+    const responseTime =
+        Number(overrides.response_time_ms ??
+            latencyElement?.value ?? 300);
+
+    const currentInstances =
+        Number(overrides.current_instances ??
+            getCloudCurrentInstances());
+
+    const applyToAws =
+        overrides.apply_to_aws !== undefined
+            ? Boolean(overrides.apply_to_aws)
+            : true;
+
+    const evaluationId = ++cloudEvaluationSequence;
+    const evaluationSource = overrides.source || "manual";
+
+    const payload = {
+        cpu_percent: Number.isFinite(cpu) ? cpu : 50,
+        memory_percent: Number.isFinite(memory) ? memory : 50,
+        request_rate: Number.isFinite(requestRate) ? requestRate : 80,
+        response_time_ms: Number.isFinite(responseTime) ? responseTime : 300,
+        current_instances:
+            Number.isFinite(currentInstances)
+                ? Math.max(1, Math.min(50, Math.round(currentInstances)))
+                : 2,
+        apply_to_aws: applyToAws
+    };
+
+    setCloudStatus(
+        "Evaluating: CPU " + payload.cpu_percent +
+        "% | Memory " + payload.memory_percent +
+        "% | Requests " + payload.request_rate +
+        "/s | Latency " + payload.response_time_ms +
+        " ms | EC2 " + payload.current_instances +
+        " | " + (evaluationSource === "manual" ? "Manual" : "Auto Simulation"),
+        "loading"
+    );
+
+    const button =
+        document.getElementById("evaluateScalingButton");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Evaluating...";
+    }
+
+    try {
+
+        const result = await apiRequest(
+            "/api/v1/scaling/evaluate-and-act",
+            {
+                method: "POST",
+                body: JSON.stringify(payload)
+            }
+        );
+
+        // Ignore stale results from an older request. Manual evaluation
+        // always wins over an automatic traffic request that started earlier.
+        if (evaluationId !== cloudEvaluationSequence) {
+            return result;
+        }
+
+        cloudLastScalingResult = result;
+
+        updateScalingDashboard(result);
+
+        await loadScalingHistory();
+
+        return result;
+
+    } catch (error) {
+
+        console.error("Cloud scaling evaluation failed:", error);
+
+        applyLocalScalingFallback(payload, error);
+
+        return null;
+
+    } finally {
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Evaluate Scaling";
+        }
 
     }
 
+}
+
+
+function applyLocalScalingFallback(payload, error) {
+
+    const cpu = Number(payload.cpu_percent);
+    const memory = Number(payload.memory_percent);
+    const latency = Number(payload.response_time_ms);
+    const requestRate = Number(payload.request_rate);
+    const current = Number(payload.current_instances);
+
+    let action = "maintain";
+    let desired = current;
+
+    if (
+        cpu >= 75 ||
+        memory >= 80 ||
+        latency >= 800 ||
+        requestRate >= current * 80
+    ) {
+
+        action = "scale_up";
+
+        const step =
+            cpu >= 85 || latency >= 1200
+                ? 2
+                : 1;
+
+        desired = Math.min(50, current + step);
+
+    } else if (
+        cpu <= 30 &&
+        memory <= 40 &&
+        latency <= 350 &&
+        requestRate <= current * 25 &&
+        current > 1
+    ) {
+
+        action = "scale_down";
+        desired = Math.max(1, current - 1);
+
+    }
+
+    const fallbackResult = {
+        decision: {
+            action: action,
+            current_instances: current,
+            desired_instances: desired,
+            confidence: 0,
+            reason:
+                "Backend unavailable. Local frontend fallback was used."
+        },
+        aws_applied: false,
+        aws_message: error
+            ? error.message
+            : "Backend unavailable.",
+        db_logged: false
+    };
+
+    updateScalingDashboard(
+        fallbackResult,
+        true
+    );
+
+    setCloudStatus(
+        "Backend unavailable — local fallback",
+        "warning"
+    );
+
+}
+
+
+function updateScalingDashboard(result, localFallback = false) {
+
+    console.log(
+        "Updating scaling dashboard:",
+        result
+    );
+
+    const decisionData =
+        result?.decision || {};
+
+    const action =
+        String(decisionData.action || "maintain")
+            .toLowerCase();
+
+    const currentInstances =
+        Number(
+            decisionData.current_instances ??
+            getCloudCurrentInstances()
+        );
+
+    const desiredInstances =
+        Number(
+            decisionData.desired_instances ??
+            currentInstances
+        );
+
+    const confidence =
+        decisionData.confidence;
+
+    const reason =
+        decisionData.reason ||
+        "Scaling decision generated by the backend.";
+
+    const displayAction =
+        formatScalingAction(action);
+
+    const displayDecision =
+        action
+            .replace(/_/g, " ")
+            .toUpperCase();
+
+    const scalingDecision =
+        document.getElementById("scalingDecision");
+
+    if (scalingDecision) {
+        scalingDecision.textContent =
+            displayDecision;
+    }
+
+    const decisionText =
+        document.getElementById("decisionText");
+
+    if (decisionText) {
+        decisionText.textContent =
+            displayAction;
+    }
+
+    const recommendedAction =
+        document.getElementById("recommendedAction");
+
+    if (recommendedAction) {
+        recommendedAction.textContent =
+            displayAction;
+    }
+
+    const trafficLevel =
+        document.getElementById("trafficLevel");
+
+    if (trafficLevel && window.currentTrafficLevel) {
+        trafficLevel.textContent =
+            String(window.currentTrafficLevel).toUpperCase();
+    }
+
+    const decisionReason =
+        document.getElementById("decisionReason");
+
+    if (decisionReason) {
+
+        let text = reason;
+
+        if (confidence !== undefined && confidence !== null) {
+            text +=
+                " Confidence: " +
+                Math.round(Number(confidence) * 100) +
+                "%.";
+        }
+
+        if (result.aws_applied) {
+            text +=
+                " AWS scaling action applied.";
+        }
+
+        if (result.aws_message) {
+            text +=
+                " " + result.aws_message;
+        }
+
+        if (localFallback) {
+            text +=
+                " This is a frontend fallback, not a backend/RL result.";
+        }
+
+        decisionReason.textContent = text;
+
+    }
+
+    setCloudCurrentInstances(
+        desiredInstances
+    );
+
+    const currentDisplay =
+        document.getElementById("cloudCurrentInstances");
+
+    if (currentDisplay) {
+        currentDisplay.textContent =
+            currentInstances;
+    }
+
+    const desiredDisplay =
+        document.getElementById("cloudDesiredInstances");
+
+    if (desiredDisplay) {
+        desiredDisplay.textContent =
+            desiredInstances;
+    }
+
+    const confidenceDisplay =
+        document.getElementById("cloudConfidence");
+
+    if (confidenceDisplay) {
+
+        confidenceDisplay.textContent =
+            confidence === undefined ||
+            confidence === null
+                ? "—"
+                : Math.round(Number(confidence) * 100) + "%";
+
+    }
+
+    const reasonDisplay =
+        document.getElementById("cloudReason");
+
+    if (reasonDisplay) {
+        reasonDisplay.textContent = reason;
+    }
+
+    const awsStatus =
+        document.getElementById("cloudAwsStatus");
+
+    if (awsStatus) {
+
+        if (result.aws_applied) {
+            awsStatus.textContent =
+                result.aws_message ||
+                "Scaling action applied";
+        } else {
+            awsStatus.textContent =
+                result.aws_message ||
+                "No AWS action applied";
+        }
+
+    }
+
+    const actionClass =
+        getScalingDecisionClass(action);
+
+    [scalingDecision, decisionText, recommendedAction]
+        .filter(Boolean)
+        .forEach(function (element) {
+
+            element.classList.remove(
+                "scale-up",
+                "scale-down",
+                "maintain"
+            );
+
+            element.classList.add(
+                actionClass
+            );
+
+        });
+
+    updateInstanceDisplay(
+        desiredInstances
+    );
+
+}
+
+
+function updateInstanceDisplay(count) {
+
+    const safeCount =
+        Math.max(
+            1,
+            Math.min(
+                50,
+                Number(count) || 1
+            )
+        );
 
     const instanceCount =
-        document.getElementById(
-            "instanceCount"
-        );
-
+        document.getElementById("instanceCount");
 
     if (instanceCount) {
-
         instanceCount.textContent =
-            data.cpu >= 80
-                ? "4"
-                : data.cpu >= 60
-                    ? "3"
-                    : "2";
-
+            Math.round(safeCount);
     }
 
-
     const visual =
-        document.getElementById(
-            "instanceVisual"
-        );
-
+        document.getElementById("instanceVisual");
 
     if (visual) {
 
-        const count =
-            data.cpu >= 80
-                ? 4
-                : data.cpu >= 60
-                    ? 3
-                    : 2;
-
+        const visibleBoxes =
+            Math.min(
+                Math.round(safeCount),
+                10
+            );
 
         visual.innerHTML =
             Array.from(
-                { length: count },
-                function () {
+                { length: visibleBoxes },
+                function (_, index) {
 
                     return `
-                        <span class="instance-box">
+                        <span class="instance-box" title="EC2 instance ${index + 1}">
                             EC2
                         </span>
                     `;
@@ -4585,60 +5013,672 @@ function setTraffic(level) {
                 }
             ).join("");
 
+        if (safeCount > 10) {
+
+            visual.innerHTML += `
+                <span class="instance-box" title="${Math.round(safeCount)} total instances">
+                    +${Math.round(safeCount) - 10}
+                </span>
+            `;
+
+        }
+
     }
 
 }
 
+
+function setCloudStatus(message, type = "info") {
+
+    const status =
+        document.getElementById("cloudStatus");
+
+    if (!status) return;
+
+    status.textContent = message;
+    status.dataset.status = type;
+
+}
+
+
+async function loadScalingHistory() {
+
+    const container =
+        document.getElementById("scalingHistory");
+
+    if (!container) return;
+
+    try {
+
+        const history =
+            await apiRequest(
+                "/api/v1/scaling/history"
+            );
+
+        const rows =
+            Array.isArray(history)
+                ? history
+                : [];
+
+        if (!rows.length) {
+
+            container.innerHTML = `
+                <div class="cloud-history-empty">
+                    No scaling decisions recorded yet.
+                </div>
+            `;
+
+            cloudHistoryLoaded = true;
+            return;
+
+        }
+
+        const latest =
+            rows
+                .slice()
+                .sort(function (a, b) {
+                    return Number(b.id || 0) -
+                        Number(a.id || 0);
+                })
+                .slice(0, 5);
+
+        container.innerHTML =
+            latest.map(function (item) {
+
+                const action =
+                    String(item.action || "maintain")
+                        .toLowerCase();
+
+                const current =
+                    item.current_instances ?? "—";
+
+                const desired =
+                    item.desired_instances ?? "—";
+
+                const confidence =
+                    item.confidence !== undefined &&
+                    item.confidence !== null
+                        ? Math.round(
+                            Number(item.confidence) * 100
+                        ) + "%"
+                        : "—";
+
+                return `
+                    <div class="cloud-history-row">
+                        <div>
+                            <strong>
+                                ${escapeHtml(formatScalingAction(action))}
+                            </strong>
+                            <small>
+                                ${escapeHtml(item.reason || "No reason provided")}
+                            </small>
+                        </div>
+
+                        <div>
+                            <strong>${escapeHtml(String(current))} → ${escapeHtml(String(desired))}</strong>
+                            <small>${escapeHtml(confidence)} confidence</small>
+                        </div>
+                    </div>
+                `;
+
+            }).join("");
+
+        cloudHistoryLoaded = true;
+
+    } catch (error) {
+
+        console.warn(
+            "Could not load scaling history:",
+            error.message
+        );
+
+        container.innerHTML = `
+            <div class="cloud-history-empty">
+                Scaling history unavailable.
+            </div>
+        `;
+
+    }
+
+}
+
+
+
+function getSavedCloudInputs() {
+    try {
+        const saved = JSON.parse(sessionStorage.getItem("festivaleCloudManualInputs") || "null");
+        if (saved && typeof saved === "object") return saved;
+    } catch (e) {}
+    return { cpu: 50, memory: 50, requests: 80, latency: 300, instances: 2 };
+}
+
+function saveCloudInputs() {
+    const values = {
+        cpu: document.getElementById("cloudCpu")?.value ?? "50",
+        memory: document.getElementById("cloudMemory")?.value ?? "50",
+        requests: document.getElementById("cloudRequests")?.value ?? "80",
+        latency: document.getElementById("cloudLatency")?.value ?? "300",
+        instances: document.getElementById("cloudInstances")?.value ?? "2"
+    };
+    sessionStorage.setItem("festivaleCloudManualInputs", JSON.stringify(values));
+    return values;
+}
+
+function restoreCloudInputs() {
+    const saved = getSavedCloudInputs();
+    const map = {
+        cloudCpu: saved.cpu,
+        cloudMemory: saved.memory,
+        cloudRequests: saved.requests,
+        cloudLatency: saved.latency,
+        cloudInstances: saved.instances
+    };
+    Object.entries(map).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el && value !== undefined && value !== null) el.value = value;
+    });
+}
+
+function createCloudScalingControls() {
+
+    const cloudSection =
+        document.getElementById("cloudSection");
+
+    if (!cloudSection) return;
+
+    const savedCloudInputs = getSavedCloudInputs();
+
+    if (document.getElementById("cloudScalingControls")) {
+        return;
+    }
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.id =
+        "cloudScalingControls";
+
+    wrapper.innerHTML = `
+
+        <div style="
+            margin-top:28px;
+            padding:24px;
+            border:1px solid rgba(255,255,255,.12);
+            border-radius:18px;
+            background:rgba(255,255,255,.04);
+        ">
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:16px;
+                flex-wrap:wrap;
+                margin-bottom:18px;
+            ">
+
+                <div>
+                    <div style="
+                        font-size:11px;
+                        letter-spacing:2px;
+                        opacity:.7;
+                        margin-bottom:5px;
+                    ">
+                        LIVE CLOUD CONTROL
+                    </div>
+
+                    <h3 style="margin:0;">
+                        Intelligent Auto-Scaling
+                    </h3>
+
+                    <p style="
+                        margin:6px 0 0;
+                        opacity:.7;
+                        font-size:13px;
+                    ">
+                        Sends workload telemetry to the FastAPI scaling service.
+                    </p>
+                </div>
+
+                <div
+                    id="cloudStatus"
+                    data-status="info"
+                    style="
+                        padding:8px 12px;
+                        border-radius:999px;
+                        background:rgba(255,255,255,.08);
+                        font-size:12px;
+                    "
+                >
+                    Ready
+                </div>
+
+            </div>
+
+
+            <div style="
+                display:grid;
+                grid-template-columns:
+                    repeat(auto-fit,minmax(150px,1fr));
+                gap:12px;
+            ">
+
+                <label style="font-size:12px;">
+                    CPU %
+                    <input
+                        id="cloudCpu"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value="${savedCloudInputs.cpu}"
+                        style="
+                            width:100%;
+                            margin-top:6px;
+                            padding:10px;
+                            border-radius:9px;
+                            border:1px solid rgba(255,255,255,.15);
+                            background:rgba(0,0,0,.18);
+                            color:inherit;
+                        "
+                    >
+                </label>
+
+                <label style="font-size:12px;">
+                    Memory %
+                    <input
+                        id="cloudMemory"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value="${savedCloudInputs.memory}"
+                        style="
+                            width:100%;
+                            margin-top:6px;
+                            padding:10px;
+                            border-radius:9px;
+                            border:1px solid rgba(255,255,255,.15);
+                            background:rgba(0,0,0,.18);
+                            color:inherit;
+                        "
+                    >
+                </label>
+
+                <label style="font-size:12px;">
+                    Requests / sec
+                    <input
+                        id="cloudRequests"
+                        type="number"
+                        min="0"
+                        value="${savedCloudInputs.requests}"
+                        style="
+                            width:100%;
+                            margin-top:6px;
+                            padding:10px;
+                            border-radius:9px;
+                            border:1px solid rgba(255,255,255,.15);
+                            background:rgba(0,0,0,.18);
+                            color:inherit;
+                        "
+                    >
+                </label>
+
+                <label style="font-size:12px;">
+                    Latency (ms)
+                    <input
+                        id="cloudLatency"
+                        type="number"
+                        min="0"
+                        value="${savedCloudInputs.latency}"
+                        style="
+                            width:100%;
+                            margin-top:6px;
+                            padding:10px;
+                            border-radius:9px;
+                            border:1px solid rgba(255,255,255,.15);
+                            background:rgba(0,0,0,.18);
+                            color:inherit;
+                        "
+                    >
+                </label>
+
+                <label style="font-size:12px;">
+                    Current EC2
+                    <input
+                        id="cloudInstances"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value="${savedCloudInputs.instances}"
+                        style="
+                            width:100%;
+                            margin-top:6px;
+                            padding:10px;
+                            border-radius:9px;
+                            border:1px solid rgba(255,255,255,.15);
+                            background:rgba(0,0,0,.18);
+                            color:inherit;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div style="
+                display:flex;
+                gap:10px;
+                flex-wrap:wrap;
+                margin-top:16px;
+            ">
+
+                <button
+                    id="evaluateScalingButton"
+                    type="button"
+                    class="auth-primary"
+                >
+                    Evaluate Scaling
+                </button>
+
+                <button
+                    id="loadScalingHistoryButton"
+                    type="button"
+                    class="auth-secondary"
+                >
+                    Refresh History
+                </button>
+
+            </div>
+
+
+            <div style="
+                display:grid;
+                grid-template-columns:
+                    repeat(auto-fit,minmax(150px,1fr));
+                gap:12px;
+                margin-top:18px;
+            ">
+
+                <div style="
+                    padding:14px;
+                    border-radius:12px;
+                    background:rgba(255,255,255,.04);
+                ">
+                    <small>Current Instances</small>
+                    <strong
+                        id="cloudCurrentInstances"
+                        style="
+                            display:block;
+                            font-size:24px;
+                            margin-top:4px;
+                        "
+                    >
+                        ${cloudCurrentInstances}
+                    </strong>
+                </div>
+
+                <div style="
+                    padding:14px;
+                    border-radius:12px;
+                    background:rgba(255,255,255,.04);
+                ">
+                    <small>Desired Instances</small>
+                    <strong
+                        id="cloudDesiredInstances"
+                        style="
+                            display:block;
+                            font-size:24px;
+                            margin-top:4px;
+                        "
+                    >
+                        ${cloudCurrentInstances}
+                    </strong>
+                </div>
+
+                <div style="
+                    padding:14px;
+                    border-radius:12px;
+                    background:rgba(255,255,255,.04);
+                ">
+                    <small>Confidence</small>
+                    <strong
+                        id="cloudConfidence"
+                        style="
+                            display:block;
+                            font-size:24px;
+                            margin-top:4px;
+                        "
+                    >
+                        —
+                    </strong>
+                </div>
+
+                <div style="
+                    padding:14px;
+                    border-radius:12px;
+                    background:rgba(255,255,255,.04);
+                ">
+                    <small>AWS Status</small>
+                    <strong
+                        id="cloudAwsStatus"
+                        style="
+                            display:block;
+                            font-size:13px;
+                            margin-top:8px;
+                        "
+                    >
+                        Not evaluated
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div style="
+                margin-top:14px;
+                padding:14px;
+                border-radius:12px;
+                background:rgba(255,255,255,.04);
+            ">
+                <small>Decision Reason</small>
+                <p
+                    id="cloudReason"
+                    style="margin:7px 0 0;line-height:1.55;"
+                >
+                    No scaling decision has been evaluated yet.
+                </p>
+            </div>
+
+
+            <div style="
+                margin-top:18px;
+            ">
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    margin-bottom:10px;
+                ">
+                    <strong>Recent Scaling History</strong>
+                    <span style="font-size:12px;opacity:.65;">
+                        Latest 5 decisions
+                    </span>
+                </div>
+
+                <div id="scalingHistory">
+                    <div class="cloud-history-empty">
+                        Loading scaling history...
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+    cloudSection.appendChild(wrapper);
+
+    const evaluateButton =
+        document.getElementById("evaluateScalingButton");
+
+    if (evaluateButton) {
+
+        evaluateButton.onclick = async function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Turn off automatic simulation so it cannot overwrite
+            // the values while a manual test is running.
+            if (autoTraffic) {
+                autoTraffic = false;
+                clearInterval(autoTrafficTimer);
+                autoTrafficTimer = null;
+                const autoButton = document.getElementById("autoTrafficButton");
+                if (autoButton) autoButton.textContent = "Start Auto Simulation";
+            }
+
+            const values = saveCloudInputs();
+
+            await evaluateCloudScaling({
+                cpu_percent: Number(values.cpu),
+                memory_percent: Number(values.memory),
+                request_rate: Number(values.requests),
+                response_time_ms: Number(values.latency),
+                current_instances: Number(values.instances),
+                apply_to_aws: true,
+                source: "manual"
+            });
+
+            // Restore exactly what the user entered. The scaling result
+            // may change the displayed desired/current instance count,
+            // but it must never replace the manual input values.
+            restoreCloudInputs();
+        };
+
+    }
+
+    const historyButton =
+        document.getElementById(
+            "loadScalingHistoryButton"
+        );
+
+    if (historyButton) {
+
+        historyButton.addEventListener(
+            "click",
+            function () {
+                loadScalingHistory();
+            }
+        );
+
+    }
+
+    ["cloudCpu", "cloudMemory", "cloudRequests", "cloudLatency", "cloudInstances"].forEach(function (id) {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener("input", saveCloudInputs);
+            input.addEventListener("change", saveCloudInputs);
+        }
+    });
+
+    restoreCloudInputs();
+
+    const instanceInput =
+        document.getElementById("cloudInstances");
+
+    if (instanceInput) {
+
+        instanceInput.addEventListener(
+            "change",
+            function () {
+                setCloudCurrentInstances(
+                    instanceInput.value
+                );
+            }
+        );
+
+    }
+
+}
+
+
+function initializeCloudMonitoring() {
+
+    createCloudScalingControls();
+
+    updateInstanceDisplay(
+        getCloudCurrentInstances()
+    );
+
+    loadScalingHistory();
+    restoreCloudInputs();
+
+}
+
+
+/* =========================================================
+   AUTOMATIC TRAFFIC SIMULATION
+   ========================================================= */
 
 function toggleAuto() {
 
     autoTraffic =
         !autoTraffic;
 
+    const button =
+        document.getElementById("autoTrafficButton");
+
+    // Manual Evaluate Scaling is always independent of this switch.
+    // Auto traffic is the only feature allowed to call setTraffic()
+    // repeatedly in the background.
 
     if (autoTraffic) {
 
-        let levels =
-            [
-                "low",
-                "normal",
-                "medium",
-                "high",
-                "festival"
-            ];
+        const levels = [
+            "low",
+            "normal",
+            "medium",
+            "high",
+            "festival"
+        ];
 
         let index = 0;
 
-
-        setTraffic(
+        evaluateTrafficSimulation(
             levels[index]
         );
-
 
         autoTrafficTimer =
             setInterval(
                 function () {
 
+                    if (!autoTraffic) {
+                        return;
+                    }
+
                     index =
                         (index + 1) %
                         levels.length;
 
-                    setTraffic(
+                    evaluateTrafficSimulation(
                         levels[index]
                     );
 
                 },
-                2200
+                5000
             );
 
+        if (button) {
+            button.textContent =
+                "Stop Auto Simulation";
+        }
 
         showToast(
             "Automatic traffic simulation enabled."
         );
 
-    }
-
-    else {
+    } else {
 
         clearInterval(
             autoTrafficTimer
@@ -4647,6 +5687,10 @@ function toggleAuto() {
         autoTrafficTimer =
             null;
 
+        if (button) {
+            button.textContent =
+                "Start Auto Simulation";
+        }
 
         showToast(
             "Automatic traffic simulation stopped."
@@ -4672,7 +5716,52 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        setTraffic("normal");
+        initializeCloudMonitoring();
+
+        // Show the normal dashboard values on first load,
+        // but do NOT send an automatic scaling decision.
+        // Manual evaluation is controlled only by the
+        // "Evaluate Scaling" button.
+        const initialData = trafficData.normal;
+
+        const initialIds = {
+            requestRate: initialData.request,
+            cpuUsage: initialData.cpu + "%",
+            responseTime: initialData.response + " ms",
+            activeUsers: initialData.users,
+            trafficLevel: "NORMAL",
+            decisionText: "Ready",
+            decisionReason: "Enter workload values and click Evaluate Scaling.",
+            recommendedAction: "Ready"
+        };
+
+        Object.keys(initialIds).forEach(function (id) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = initialIds[id];
+            }
+        });
+
+        const cpuBar = document.getElementById("cpuBar");
+        if (cpuBar) cpuBar.style.width = initialData.cpu + "%";
+
+        const requestBar = document.getElementById("requestBar");
+        if (requestBar) {
+            requestBar.style.width =
+                Math.min((initialData.request / 250) * 100, 100) + "%";
+        }
+
+        const responseBar = document.getElementById("responseBar");
+        if (responseBar) {
+            responseBar.style.width =
+                Math.min((initialData.response / 1000) * 100, 100) + "%";
+        }
+
+        const usersBar = document.getElementById("usersBar");
+        if (usersBar) {
+            usersBar.style.width =
+                Math.min((initialData.users / 1600) * 100, 100) + "%";
+        }
 
     }
 );
@@ -4847,8 +5936,20 @@ window.closeModal =
 window.setTraffic =
     setTraffic;
 
+window.evaluateTrafficSimulation =
+    evaluateTrafficSimulation;
+
 window.toggleAuto =
     toggleAuto;
 
 window.toggleAutoTraffic =
     toggleAutoTraffic;
+
+window.evaluateCloudScaling =
+    evaluateCloudScaling;
+
+window.loadScalingHistory =
+    loadScalingHistory;
+
+window.initializeCloudMonitoring =
+    initializeCloudMonitoring;
