@@ -217,4 +217,15 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Visual Studio Code
 .vscode/
+
+# Ivy backend local environment/database
+src/backend/.env
+src/backend/.venv/
+src/backend/*.db
+src/backend/__pycache__/
+src/backend/app/__pycache__/
+src/backend/tests/__pycache__/
+.pytest_cache/
+.DS_Store

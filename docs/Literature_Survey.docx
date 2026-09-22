@@ -1,0 +1,217 @@
+# Literature Survey
+
+Student 1 - Khushi Agarwal
+## Paper 1 – Demand Forecasting using Deep Reinforcement Learning and Bald Eagle Search
+
+This paper proposes a demand forecasting model using Deep Q-Network (DQN) and the Bald Eagle Search (BES) optimization algorithm. The model predicts product demand using historical sales data and customer purchasing behaviour. It helps businesses improve inventory management and demand planning.
+
+**Advantages**
+- Improves demand prediction accuracy.
+- Supports better inventory management.
+- Reduces forecasting errors.
+
+**Limitations**
+- Focuses only on demand prediction.
+- Does not provide cloud resource management or auto-scaling.
+
+---
+
+## Paper 2 – AI-Based Data Fusion for Intelligent Decision-Making
+
+This paper presents an intelligent decision-making framework that combines data from multiple sources using Artificial Intelligence techniques. It helps organizations make better business decisions by analyzing large amounts of enterprise data.
+
+**Advantages**
+- Improves decision-making accuracy.
+- Processes data from multiple sources.
+- Supports faster business decisions.
+
+**Limitations**
+- Complex implementation.
+- Does not address cloud resource allocation or auto-scaling.
+
+---
+
+## Paper 3 – Customer Behaviour Analysis for E-Commerce
+
+This paper studies customer browsing behaviour, purchase history, and shopping patterns to improve product recommendations and marketing strategies using machine learning techniques.
+
+**Advantages**
+- Improves customer experience.
+- Provides better product recommendations.
+- Supports personalized marketing.
+
+**Limitations**
+- Focuses only on customer behaviour.
+- Does not improve cloud infrastructure performance.
+
+---
+
+## Paper 4 – Data Mining for E-Commerce Business Optimization
+
+This paper uses data mining techniques to analyze customer purchasing behaviour and improve inventory management, logistics, and overall business performance.
+
+**Advantages**
+- Improves inventory management.
+- Supports business planning.
+- Enhances customer satisfaction.
+
+**Limitations**
+- Does not consider cloud infrastructure.
+- Does not provide intelligent auto-scaling.
+
+---
+
+## Paper 5 – Intelligent Decision-Making Driven by Large AI Models: Progress, Challenges and Prospects
+
+This paper explains how Large AI Models (LLMs) improve intelligent decision-making by analyzing large amounts of data and supporting complex business decisions. It discusses recent developments, challenges, and future research directions.
+
+**Advantages**
+- Provides a comprehensive overview of Large AI Models.
+- Explains current research trends and future opportunities.
+- Supports intelligent decision-making across different domains.
+
+**Limitations**
+- It is a survey paper without practical implementation.
+- Does not focus on cloud auto-scaling or e-commerce applications.
+
+#Student 2 Arpita Sinha
+#Paper 1 An approach to optimize Kubernetes resource management through its adaptive scheduling system combined with threshold-based predictive scaling
+
+Combines time-series forecasting with adaptive pod scheduling to proactively scale Kubernetes resources before demand spikes hit.
+
+# Advantages:
+Reduces pod scheduling latency, enabling faster deployment
+Enables proactive (rather than reactive) scaling by predicting future CPU/memory demand
+Integrates easily with existing monitoring tools (Prometheus, Grafana)
+
+#Limitations:
+Evaluated only in Minikube, not representative of large-scale production clusters
+Only considers CPU/memory, ignoring network bandwidth, storage I/O, and energy consumption
+
+
+##Paper 2 Intelligent optimization of high-concurrency distributed systems
+Uses microservice architecture and multi-tier caching to keep distributed systems responsive and stable under sudden high-concurrency traffic.
+
+#Advantages:
+Reduces latency and database overload under high concurrency
+Improves system responsiveness and stability during traffic spikes
+Generalizable to other high-parallelism distributed systems beyond e-commerce
+
+#Limitations:
+Dataset and experimental setup are not specified in the abstract
+Implementation complexity and deployment cost of microservices/caching are not discussed
+No comparison with existing optimization or resource management algorithms
+
+
+
+##Paper 3 Big Data and cloud integration for scalable solutions in E-commerce and digital transformation.
+Reviews how cloud computing and Big Data technologies together enable scalable storage, processing, and analytics for e-commerce platforms.
+
+#Advantages:
+Explains how cloud computing enables scalable storage/processing of large datasets
+Demonstrates Big Data analytics supporting data-driven decision-making
+Uses real industry case studies for practical grounding
+
+#Limitations:
+Purely conceptual — no implementation or performance evaluation provided
+No dataset or experimental environment specified
+Data privacy, security, and regulatory compliance are not discussed
+
+
+##Paper 4 Intelligent Auto-Scaling in Hybrid and Multi-Cloud Architectures Using Reinforcement Learning
+Surveys how reinforcement learning techniques (Deep RL, Meta-RL, multi-objective RL) can be applied to auto-scale resources across hybrid and multi-cloud environments.
+
+#Advantages:
+Comprehensive overview of RL techniques applicable to cloud auto-scaling
+Discusses multi-objective balancing (performance, cost, energy efficiency)
+Identifies clear future research directions (hybrid approaches, continuous learning)
+
+#Limitations:
+Review paper only — no new RL model proposed or experimentally validated
+RL approaches require extensive training data/compute, raising deployment complexity
+Limited comparison with traditional rule-based or predictive auto-scaling methods
+
+
+##Paper 5 Cloud-Based Big Data Pipeline for Global E-Commerce Analytics
+Implements a Lambda Architecture on AWS to process both batch and real-time e-commerce data for analytics like recommendations and fraud detection.
+
+#Advantages:
+Supports both batch and real-time analytics simultaneously
+Leverages AWS cloud services for scalability and flexibility
+Enables real-time insights for recommendation systems, fraud detection, and clickstream analysis
+
+#Limitations:
+Tightly coupled to the AWS ecosystem, limiting cloud portability
+Lambda Architecture increases complexity by requiring both batch and streaming pipelines
+No experimental performance metrics (throughput, latency, fault tolerance) provided
+
+#Student 3- Ivy Gupta
+## Paper 1 – A Meta Reinforcement Learning Approach for Predictive Autoscaling in the Cloud
+
+This paper proposes a Meta Reinforcement Learning (Meta-RL) model for predictive cloud auto-scaling that adapts quickly to changing workloads while optimizing resource usage.
+
+#Advantages**
+- Adapts quickly to changing cloud workloads.
+- Improves resource utilization and reduces costs.
+- Minimizes response time and SLA violations.
+
+#Limitations**
+- Requires extensive training data.
+- Computationally expensive to train.
+- Mainly evaluated in simulated environments.
+
+## Paper 2 – A Machine Learning Approach for E-Commerce Sales Forecasting and Price Optimization in the Digital Society Era
+
+This paper uses machine learning to forecast e-commerce sales and optimize product pricing using historical sales data.
+
+#Advantages**
+- Improves sales forecasting accuracy.
+- Supports intelligent price optimization.
+- Helps businesses make data-driven decisions.
+
+#Limitations**
+- Focuses only on sales forecasting and pricing.
+- Does not address cloud resource management.
+- Depends on high-quality historical data.
+
+## Paper 3 – A Systematic Review of Demand Forecasting Models for Retail E-Commerce: Enhancing Accuracy in Inventory and Delivery Planning
+
+This paper reviews different demand forecasting techniques used to improve inventory management and delivery planning in retail e-commerce.
+
+#Advantages**
+- Compares various forecasting techniques.
+- Highlights best practices for inventory planning.
+- Identifies future research opportunities.
+
+#Limitations**
+- Review paper without implementation.
+- Does not propose a new forecasting model.
+- Does not address cloud auto-scaling.
+
+## Paper 4 – AI-Driven Dynamic Scaling Frameworks for Resilient Microservices in Cloud-Based E-Commerce Platforms
+
+This paper proposes an AI-based framework that dynamically scales cloud microservices to improve the performance of e-commerce applications.
+
+#Advantages**
+- Enables intelligent auto-scaling.
+- Improves application performance during traffic spikes.
+- Enhances resource utilization.
+
+#Limitations**
+- Complex to implement.
+- Requires continuous monitoring and model training.
+- Limited large-scale validation.
+
+## Paper 5 – Emerging Technologies in E-Commerce Demand Forecasting: Trends, Practices, and Future Perspectives
+
+This paper reviews emerging AI and Big Data technologies used for demand forecasting in e-commerce and discusses future research directions.
+
+#Advantages**
+- Reviews modern forecasting technologies.
+- Highlights current trends and future opportunities.
+- Explains the role of AI in demand prediction.
+
+#Limitations**
+- Survey paper without implementation.
+- Does not propose a new model.
+- Does not focus on cloud resource optimization.
