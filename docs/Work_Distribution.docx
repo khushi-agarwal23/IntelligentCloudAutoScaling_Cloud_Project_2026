@@ -1,50 +1,21 @@
-# Work Distribution
+## Student 1 – Khushi Agarwal
 
-The project work is divided among team members according to the major components of the Intelligent Cloud Auto Scaling system.
+- Design and develop the frontend interface for the e-commerce application.
+- Create responsive and user-friendly web pages for customers.
+- Integrate the frontend with backend services and cloud components.
+- Participate in system integration, functional testing, and debugging.
+- Contribute to project documentation, presentation preparation, and GitHub repository maintenance.
 
-## Student 2 – Arpita Sinha
+## Student 2 - Arpita Sinha
 
-### Reinforcement Learning Module
+- Configure and manage the AWS cloud infrastructure, including Amazon EC2, Elastic Load Balancer (ELB), Auto Scaling Group, Amazon CloudWatch, Amazon RDS, and Amazon S3.
+- Develop and train the Reinforcement Learning (RL) model for intelligent cloud auto-scaling.
+- Integrate the RL model with AWS Auto Scaling services to enable real-time scaling decisions.
+- Perform cloud deployment, system performance evaluation, and resource utilization analysis.
 
-* Designed the reinforcement learning environment.
-* Defined the state representation using CPU utilization, request count, and instance count.
-* Defined the three scaling actions: scale in, maintain, and scale out.
-* Designed the reward structure for different workload conditions.
+## Student 3 - Ivy Gupta
 
-### Q-Learning Implementation
-
-* Implemented the Q-learning agent.
-* Added epsilon-greedy action selection during training.
-* Implemented Q-table updates and exploration decay.
-* Saved the trained Q-table for later inference.
-
-### Training and Evaluation
-
-* Developed the RL training process.
-* Trained the Q-learning agent using simulated workload conditions.
-* Developed evaluation tests for low, medium, and high workload scenarios.
-* Verified that the trained agent produces appropriate scaling decisions for the tested conditions.
-
-### API Integration
-
-* Integrated the trained RL agent with a FastAPI endpoint.
-* Connected workload input to RL state creation and action selection.
-* Implemented inference using the saved Q-table.
-
-### Cloud Scaling Simulation
-
-* Implemented the mock AWS Auto Scaling Group.
-* Connected the RL scaling action to simulated scale-in, maintain, and scale-out operations.
-* Tested the complete workload-to-scaling pipeline.
-
-## Other Team Members
-
-Other team members are responsible for the remaining project components, including cloud infrastructure configuration, monitoring, application workload generation, documentation, testing, and project presentation, according to the team's internal allocation.
-
-## Overall Integration
-
-The individual modules are integrated into a common system consisting of:
-
-Workload → FastAPI → Q-Learning Agent → Scaling Decision → Mock AWS Auto Scaling
-
-Future integration can connect the trained RL agent to the actual AWS Auto Scaling Group.
+- Design and develop the backend of the application.
+- Develop REST APIs for communication between the frontend, database, and AI modules.
+- Implement and manage Amazon RDS database integration for storing user and transaction data.
+- Assist in system integration, backend testing, and performance optimization.
