@@ -1,0 +1,27 @@
+# Objectives
+
+The main objectives of the Intelligent Cloud Auto Scaling project are:
+
+1. To develop a reinforcement learning based approach for intelligent cloud resource scaling.
+
+2. To design an auto-scaling environment using CPU utilization, request count, and instance count as workload and system parameters.
+
+3. To implement a Q-learning agent capable of selecting among three scaling actions:
+
+   * Scale In
+   * Maintain
+   * Scale Out
+
+4. To define suitable states, actions, and reward values for the auto-scaling environment.
+
+5. To train the Q-learning agent using simulated workload conditions.
+
+6. To save the trained Q-table so that the learned policy can be reused during inference.
+
+7. To evaluate the trained agent using different workload conditions and verify its scaling decisions.
+
+8. To integrate the trained RL agent with a FastAPI endpoint for workload-based scaling predictions.
+
+9. To simulate the interaction between the RL agent and an AWS Auto Scaling Group using a mock AWS implementation.
+
+10. To provide a foundation for future integration with real AWS Auto Scaling services and real-world workload data.
