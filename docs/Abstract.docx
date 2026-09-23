@@ -1,0 +1,9 @@
+# Abstract
+
+Cloud applications experience continuously changing workloads, making it difficult to maintain an appropriate number of computing resources using fixed scaling rules. Traditional auto-scaling approaches commonly depend on predefined CPU or request thresholds, which may not respond effectively to different workload conditions.
+
+This project proposes an Intelligent Cloud Auto Scaling system using Reinforcement Learning (RL), specifically a Q-learning algorithm, to make scaling decisions based on workload conditions. The system considers CPU utilization, request count, and the current number of instances as the state of the environment. The agent can select one of three actions: scale in, maintain, or scale out.
+
+A simulated cloud workload environment is used to train the Q-learning agent. The trained Q-table is saved and subsequently used for decision-making without further exploration. A FastAPI-based interface receives workload information and passes it to the trained agent. The selected scaling action is then applied to a mock AWS Auto Scaling Group, allowing the complete decision-making process to be tested without modifying real AWS infrastructure.
+
+The system was evaluated using low, normal, and high workload conditions. The trained agent demonstrated appropriate scaling decisions for these test cases, including scaling out during high workloads, maintaining capacity under normal workloads, and scaling in during low workloads. The implementation provides a foundation for future integration with AWS Auto Scaling services and real cloud workload data.
