@@ -1,0 +1,58 @@
+System architecture:
+┌──────────────────────────────┐
+│      Workload Input          │
+│                              │
+│ CPU Utilization              │
+│ Request Count                │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│          FastAPI             │
+│                              │
+│ Receives workload data       │
+│ through /predict endpoint    │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│      RL State Creation       │
+│                              │
+│ CPU Level                    │
+│ Request Level                │
+│ Current Instance Count       │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│     Trained Q-Learning       │
+│          Agent               │
+│                              │
+│ Loads saved Q-table          │
+│ Selects scaling action       │
+└──────────────┬───────────────┘
+               ↓
+        ┌──────┴──────┐
+        ↓             ↓
+   ┌─────────┐   ┌───────────┐
+   │ SCALE IN│   │  MAINTAIN │
+   │    0    │   │     1     │
+   └─────────┘   └───────────┘
+        │             │
+        └──────┬──────┘
+               ↓
+          ┌───────────┐
+          │ SCALE OUT │
+          │     2     │
+          └─────┬─────┘
+                ↓
+┌──────────────────────────────┐
+│   Mock AWS Auto Scaling      │
+│          Group               │
+│                              │
+│ Applies selected action      │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│       Instance Count         │
+│                              │
+│ Minimum: 1                   │
+│ Maximum: 3                   │
+└──────────────────────────────┘
