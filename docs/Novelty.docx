@@ -1,0 +1,37 @@
+# Novelty
+
+The proposed system introduces reinforcement learning into the cloud auto-scaling decision process instead of relying only on fixed threshold-based rules.
+
+The main novel aspects of the project are:
+
+### 1. Reinforcement Learning Based Scaling
+
+A Q-learning agent learns the relationship between workload conditions and appropriate scaling actions. The agent learns through rewards rather than using only manually defined scaling rules during inference.
+
+### 2. Multiple Workload Indicators
+
+The system considers both CPU utilization and request count along with the current instance count. This provides a broader representation of the workload state than using a single resource metric.
+
+### 3. Three-Way Scaling Decision
+
+The RL agent selects among three actions:
+
+* `0` → Scale In
+* `1` → Maintain
+* `2` → Scale Out
+
+This allows the system to respond to low, normal, and high workload conditions.
+
+### 4. Learned Policy Persistence
+
+After training, the learned Q-table is saved as a model file. The saved policy can then be loaded by the application for making scaling decisions without retraining the agent for every request.
+
+### 5. API-Based Integration
+
+The trained agent is integrated with a FastAPI endpoint. This provides a practical interface through which workload information can be submitted and a scaling decision can be returned.
+
+### 6. Cloud Scaling Simulation
+
+A mock AWS Auto Scaling Group is used to test the complete decision-making flow safely before connecting the system to actual AWS Auto Scaling infrastructure.
+
+The current implementation therefore demonstrates the complete path from workload input to reinforcement learning decision and simulated scaling action.
