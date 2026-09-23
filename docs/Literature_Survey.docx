@@ -1,0 +1,37 @@
+# Literature Survey
+
+## 1. Cloud Auto Scaling
+
+Cloud auto-scaling is an important technique for dynamically adjusting computing resources according to application workload. Traditional cloud platforms commonly use threshold-based policies, where resources are added or removed when metrics such as CPU utilization cross predefined thresholds.
+
+Although threshold-based scaling is simple to implement, selecting suitable thresholds can be difficult when workloads change rapidly or unpredictably.
+
+## 2. Reinforcement Learning for Resource Management
+
+Reinforcement learning provides a framework in which an agent learns actions through interaction with an environment and feedback in the form of rewards. This makes RL suitable for resource management problems where the best action may depend on changing system conditions.
+
+In cloud environments, RL has been investigated for tasks such as resource allocation, workload management, server provisioning, and auto-scaling.
+
+## 3. Q-Learning
+
+Q-learning is a model-free reinforcement learning algorithm that learns the expected value of taking an action in a particular state.
+
+For cloud auto-scaling, the state can represent workload and resource conditions, while actions can represent scale-in, maintain, and scale-out decisions.
+
+The Q-learning update is based on the current reward and the estimated future value of the next state.
+
+## 4. Machine Learning Based Auto Scaling
+
+Machine learning based approaches attempt to improve scaling decisions by learning patterns from workload or system behavior. These approaches can reduce dependence on manually selected thresholds and can potentially adapt to changing workload conditions.
+
+However, their effectiveness depends on the quality of the training environment, workload representation, reward function, and evaluation methodology.
+
+## 5. Research Motivation
+
+The literature indicates that intelligent resource management can benefit from learning-based approaches. Based on this motivation, the proposed project implements a Q-learning based auto-scaling decision system.
+
+The current implementation focuses on CPU utilization, request count, and instance count, and evaluates the learned policy using simulated workload conditions.
+
+## 6. Summary
+
+The literature survey provides the foundation for applying reinforcement learning to cloud auto-scaling. The proposed implementation applies these concepts using a discrete Q-learning environment and evaluates the resulting scaling decisions through a mock AWS Auto Scaling Group.
