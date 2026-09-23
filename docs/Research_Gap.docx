@@ -1,0 +1,35 @@
+# Research Gap
+
+Cloud auto-scaling has traditionally relied on threshold-based policies, where resources are scaled according to predefined CPU utilization, request, or resource-usage thresholds. Although such approaches are simple to implement, fixed thresholds may not adapt well to changing workload conditions.
+
+Machine learning and reinforcement learning approaches have been explored to make cloud resource management more adaptive. However, several challenges remain in developing practical and easily deployable RL-based auto-scaling systems.
+
+The key research gaps considered in this project are:
+
+### 1. Dependence on Fixed Scaling Rules
+
+Traditional auto-scaling systems commonly use predefined thresholds. These rules may require manual tuning and may not provide flexible decisions for different workload conditions.
+
+### 2. Limited Consideration of Multiple Workload Factors
+
+A scaling decision based on only one metric may not fully represent the current workload. The proposed system considers CPU utilization, request count, and current instance count together when representing the RL state.
+
+### 3. Need for Learned Scaling Decisions
+
+There is a need for approaches where scaling decisions can be learned from interactions with a simulated environment rather than relying entirely on manually specified decision rules.
+
+### 4. Practical Integration of RL with Cloud Scaling
+
+An RL algorithm alone does not provide a complete cloud auto-scaling solution. The trained policy needs to be connected to an application interface and a scaling mechanism. This project addresses this by integrating the trained Q-learning agent with a FastAPI endpoint and a mock Auto Scaling Group.
+
+### 5. Safe Evaluation Before Real Cloud Deployment
+
+Testing an experimental scaling policy directly on cloud infrastructure can introduce unnecessary resource usage and cost. The project therefore uses a mock AWS Auto Scaling implementation to verify the complete decision-making pipeline before potential real AWS integration.
+
+## Proposed Approach
+
+To address these gaps, the project develops a Q-learning based auto-scaling system. The agent learns to select among scale-in, maintain, and scale-out actions using CPU utilization, request count, and instance count as state information.
+
+The trained Q-table is saved and used during inference. The resulting policy is integrated with FastAPI and tested using simulated workload conditions and a mock AWS Auto Scaling Group.
+
+The current implementation provides a foundation for future evaluation using real cloud workload data and integration with the AWS Auto Scaling API.
