@@ -1,0 +1,6 @@
+threshold_percentile,cpu_threshold,memory_threshold,scale_up_count,scale_up_rate_percent,high_utilization_count,true_positive,false_positive,false_negative,true_negative,precision_percent,recall_percent
+75,44.8261,89.818,6474,60.99,6476,6211,263,265,3876,95.94,95.91
+80,46.774,90.1242,5929,55.85,5931,5695,234,236,4450,96.05,96.02
+85,49.1255,90.4486,5372,50.61,5374,5143,229,231,5012,95.74,95.7
+90,52.1015,90.8499,4570,43.05,4572,4316,254,256,5789,94.44,94.4
+95,55.9984,91.3906,3522,33.18,3524,3287,235,237,6856,93.33,93.27

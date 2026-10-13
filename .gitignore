@@ -229,3 +229,6 @@ src/backend/app/__pycache__/
 src/backend/tests/__pycache__/
 .pytest_cache/
 .DS_Store
+# External Alibaba source data and large preprocessing checkpoints
+/data/**/raw/
+/data/alibaba2018/processed/checkpoints/

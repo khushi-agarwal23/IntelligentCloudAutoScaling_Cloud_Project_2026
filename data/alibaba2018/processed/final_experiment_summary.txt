@@ -1,0 +1,40 @@
+ALIBABA 2018 WORKLOAD EXPERIMENT SUMMARY
+================================================
+
+Dataset: Alibaba 2018 machine usage trace
+Evaluation type: Offline chronological evaluation
+Important: Results do not represent live AWS performance.
+
+Forecast model comparison
+-------------------------
+     target        model  model_mae  model_rmse  persistence_mae  persistence_rmse  mae_improvement_percent
+   cpu_mean RandomForest   1.390935    1.854632         1.392915          1.858352                 0.142118
+memory_mean RandomForest   0.151256    0.214108         0.149451          0.205146                -1.208121
+
+Persistence forecast baseline
+-----------------------------
+metric      mae     rmse  training_p95  test_p95  test_values_above_training_p95  test_rows
+   CPU 1.392877 1.858289     55.997552 55.339421                             473      10617
+Memory 0.149466 0.205158     91.391718 93.608466                            3324      10617
+
+Threshold sensitivity
+---------------------
+ threshold_percentile  cpu_threshold  memory_threshold  scale_up_count  scale_up_rate_percent  high_utilization_count  true_positive  false_positive  false_negative  true_negative  precision_percent  recall_percent
+                   75        44.8261           89.8180            6474                  60.99                    6476           6211             263             265           3876              95.94           95.91
+                   80        46.7740           90.1242            5929                  55.85                    5931           5695             234             236           4450              96.05           96.02
+                   85        49.1255           90.4486            5372                  50.61                    5374           5143             229             231           5012              95.74           95.70
+                   90        52.1015           90.8499            4570                  43.05                    4572           4316             254             256           5789              94.44           94.40
+                   95        55.9984           91.3906            3522                  33.18                    3524           3287             235             237           6856              93.33           93.27
+
+INTERPRETATION
+--------------
+1. Random Forest provides only a 0.14% CPU MAE improvement
+   over persistence in the recorded model comparison.
+2. Persistence has lower memory MAE than Random Forest.
+3. Threshold sensitivity shows different scale-up frequencies
+   under different training-derived percentile thresholds.
+4. Q-learning and threshold policies made identical decisions
+   in the recorded held-out test evaluation.
+5. Capacity-response results use hypothetical assumptions.
+6. No real AWS cost savings, latency improvement, or capacity
+   benefit has been measured by these experiments.
