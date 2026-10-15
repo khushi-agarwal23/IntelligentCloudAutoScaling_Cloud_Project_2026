@@ -1,0 +1,7 @@
+Method,Avg Reward,SLA Violation %,Avg Cost,Scaling Events,Avg Throughput,Avg Response Time (ms)
+Student 2 (Rule-Based Threshold),-3045.84,100.0%,702.00,7.0,243.8,3161.1
+Baseline (random),-468.61,62.2%,4196.10,188.9,1450.1,922.2
+Baseline (always_scale_out),155.14,0.0%,26544.00,288.0,3757.4,132.7
+DQN Agent,227.42,0.0%,11410.00,42.0,3730.5,237.6
+PPO Agent,212.27,0.0%,9630.00,25.0,3322.8,270.3
+Hierarchical RL,-2379.91,81.6%,4496.00,286.0,1224.4,2557.8
