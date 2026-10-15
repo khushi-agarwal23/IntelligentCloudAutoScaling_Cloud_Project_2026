@@ -1,0 +1,51 @@
+# ==============================================================================
+# Hyperparameter Configurations for Reinforcement Learning Autoscaling
+# ==============================================================================
+
+# Deep Q-Network (DQN) Configuration
+dqn:
+  lr: 0.0005                 # Learning rate for Adam optimizer
+  gamma: 0.99                # Discount factor for future rewards
+  epsilon_start: 1.0         # Initial exploration rate
+  epsilon_end: 0.05          # Minimum exploration rate floor
+  epsilon_decay: 0.995       # Multiplicative decay factor per episode/step
+  batch_size: 64             # Replay memory sample batch size
+  buffer_size: 50000         # Maximum capacity of replay buffer
+  target_update_freq: 10     # Interval (episodes or steps) for target network sync
+  episodes: 500              # Total training episodes
+
+# Proximal Policy Optimization (PPO) Configuration
+ppo:
+  lr: 0.0003                 # Learning rate for actor and critic networks
+  n_steps: 2048              # Number of environment steps per rollout buffer
+  batch_size: 64             # Minibatch size during policy updates
+  n_epochs: 10               # Number of optimization epochs per rollout
+  gamma: 0.99                # Discount factor for future rewards
+  clip_range: 0.2            # PPO surrogate objective clipping parameter (epsilon)
+  ent_coef: 0.01             # Entropy bonus coefficient for exploration
+  vf_coef: 0.5               # Value function loss coefficient in total loss
+  total_timesteps: 100000    # Total environment interaction steps
+
+# Cloud Autoscaling Environment Configuration
+environment:
+  episode_length: 288        # Episode horizon (e.g., 24 hours at 5-minute granularity)
+  sla_threshold: 200.0       # Latency threshold for SLA guarantee (milliseconds)
+  max_instances: 20          # Maximum VM/container instance limit
+  min_instances: 1           # Minimum VM/container instance limit
+  per_instance_capacity: 100.0  # Traffic throughput capacity per active instance (req/s)
+
+# Reward Function Weights & Trade-offs
+reward:
+  alpha: 1.0                 # SLA violation penalty coefficient
+  beta: 0.5                  # Instance running cost coefficient
+  gamma_cost: 0.2            # Instance scaling action churn / switching cost coefficient
+  delta: 0.1                 # Resource utilization / latency headroom stability coefficient
+
+# Hierarchical Reinforcement Learning (HRL) Configuration (Novelty)
+hierarchical:
+  meta_period: 6             # Macro decision interval (e.g., 6 steps = 30 minutes)
+  meta_lr: 0.001             # Learning rate for high-level meta-controller
+  sub_lr: 0.0005             # Learning rate for low-level worker sub-policy
+  gamma: 0.99                # Discount factor for future rewards
+  batch_size: 64             # Minibatch size
+  episodes: 500              # Total training episodes
