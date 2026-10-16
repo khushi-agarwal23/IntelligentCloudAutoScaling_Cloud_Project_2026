@@ -4500,7 +4500,7 @@ async function evaluateTrafficSimulation(level) {
         request_rate: data.request,
         response_time_ms: data.response,
         current_instances: getCloudCurrentInstances(),
-        apply_to_aws: true,
+        apply_to_aws: false,
         source: "traffic_simulation"
     });
 
@@ -4632,7 +4632,8 @@ async function evaluateCloudScaling(overrides = {}) {
     const applyToAws =
         overrides.apply_to_aws !== undefined
             ? Boolean(overrides.apply_to_aws)
-            : true;
+            : false;
+
 
     const evaluationId = ++cloudEvaluationSequence;
     const evaluationSource = overrides.source || "manual";
@@ -4689,9 +4690,24 @@ async function evaluateCloudScaling(overrides = {}) {
 
         await loadScalingHistory();
 
+        if (evaluationId === cloudEvaluationSequence) {
+            setCloudStatus(
+                result.db_logged
+                    ? "Decision complete — saved to history."
+                    : "Decision complete.",
+                "success"
+            );
+        }
+
         return result;
 
     } catch (error) {
+
+        // A failed older request must not replace a newer result with the
+        // local fallback while a more recent evaluation is already active.
+        if (evaluationId !== cloudEvaluationSequence) {
+            return null;
+        }
 
         console.error("Cloud scaling evaluation failed:", error);
 
@@ -4701,7 +4717,7 @@ async function evaluateCloudScaling(overrides = {}) {
 
     } finally {
 
-        if (button) {
+        if (button && evaluationId === cloudEvaluationSequence) {
             button.disabled = false;
             button.textContent = "Evaluate Scaling";
         }
@@ -4788,7 +4804,9 @@ function updateScalingDashboard(result, localFallback = false) {
     );
 
     const decisionData =
-        result?.decision || {};
+        result?.decision ||
+            (result?.action ? result : {});
+
 
     const action =
         String(decisionData.action || "maintain")
@@ -4887,7 +4905,9 @@ function updateScalingDashboard(result, localFallback = false) {
     }
 
     setCloudCurrentInstances(
-        desiredInstances
+        result?.aws_applied
+            ? desiredInstances
+            : currentInstances
     );
 
     const currentDisplay =
@@ -5546,7 +5566,7 @@ function createCloudScalingControls() {
                 request_rate: Number(values.requests),
                 response_time_ms: Number(values.latency),
                 current_instances: Number(values.instances),
-                apply_to_aws: true,
+                apply_to_aws: false,
                 source: "manual"
             });
 

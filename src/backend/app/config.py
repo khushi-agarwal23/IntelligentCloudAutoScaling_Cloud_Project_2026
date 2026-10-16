@@ -46,11 +46,16 @@ class Settings(BaseSettings):
     AI_TIMEOUT_SECONDS: float = 3.0
 
     # AWS Auto Scaling Group Integration
-    AWS_REGION: str = "us-east-1"
-    AWS_ASG_NAME: str = "ecommerce-festival-asg"
+    AWS_REGION: str = "ap-south-1"
+    AWS_ASG_NAME: str = "rl-autoscaling-group"
     AWS_MOCK_MODE: bool = True
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_LIVE_SCALING_ENABLED: bool = False
+    AWS_LIVE_SCALING_PERMISSION_CONFIRMED: bool = False
+    AWS_PROFILE: Optional[str] = None
+    AWS_EXPECTED_ACCOUNT_ID: Optional[str] = None
+    AWS_EXPECTED_LAUNCH_TEMPLATE: str = "autoscaling-launch-template"
+    AWS_EXPECTED_MIN_SIZE: int = 1
+    AWS_EXPECTED_MAX_SIZE: int = 3
 
     def get_database_url(self) -> str:
         """

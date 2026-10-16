@@ -48,10 +48,40 @@ def test_aws_asg_mock_client():
     client = AWSAutoScalingClient()
     assert client.mock_mode is True
 
-    res = client.set_desired_capacity(5)
+    assert client.set_desired_capacity(2)["success"] is True
+    res = client.set_desired_capacity(3)
     assert res["success"] is True
     assert res["mode"] == "mock"
-    assert res["desired_capacity"] == 5
+    assert res["desired_capacity"] == 3
+
+    rejected = client.set_desired_capacity(4)
+    assert rejected["success"] is False
 
     current = client.get_current_capacity()
-    assert current == 5
+    assert current == 3
+
+
+def test_live_preflight_fails_closed_without_initialized_aws_clients():
+    client = AWSAutoScalingClient()
+    client.mock_mode = False
+    client._client = None
+    client._sts_client = None
+    client._initialization_error = "NoCredentialsError"
+
+    result = client.preflight("scale_up")
+    assert result["mode"] == "live"
+    assert result["ready"] is False
+    assert result["errors"] == ["NoCredentialsError"]
+    assert client.mock_mode is False
+
+
+def test_live_mutation_fails_closed_without_both_gates(monkeypatch):
+    from app.config import settings
+
+    client = AWSAutoScalingClient()
+    client.mock_mode = False
+    monkeypatch.setattr(settings, "AWS_LIVE_SCALING_ENABLED", True)
+    monkeypatch.setattr(settings, "AWS_LIVE_SCALING_PERMISSION_CONFIRMED", False)
+    result = client.set_desired_capacity(3, expected_action="scale_up")
+    assert result["success"] is False
+    assert "disabled or write permission" in result["message"]

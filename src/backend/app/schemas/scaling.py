@@ -31,7 +31,7 @@ class EvaluateAndActRequest(BaseModel):
     request_rate: Optional[float] = None
     response_time_ms: Optional[float] = None
     current_instances: Optional[int] = None
-    apply_to_aws: bool = Field(True, description="Whether to invoke AWS ASG client")
+    apply_to_aws: bool = Field(False, description="Explicitly request an AWS capacity change; live mode also requires AWS_LIVE_SCALING_ENABLED=true")
 
 
 class EvaluateAndActResponse(BaseModel):

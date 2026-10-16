@@ -60,7 +60,7 @@ src/backend/
 │   ├── init_db.py               # Table creation script (PostgreSQL, MySQL, SQLite)
 │   ├── seed_data.py             # Synthetic festival users, orders, & metrics seeder
 │   └── simulate_traffic.py      # Real-time festival traffic spike simulator
-├── tests/                       # 21 automated unit and integration tests (100% passing)
+├── tests/                       # Automated unit and integration tests
 ├── .env.example                 # Config template for Amazon RDS & AWS
 ├── pytest.ini                   # Pytest configuration
 ├── requirements.txt             # Backend dependencies
@@ -143,23 +143,24 @@ Interactive Swagger API documentation is available at: **http://127.0.0.1:8000/d
 | `POST` | `/api/v1/scaling/evaluate-and-act` | Complete loop: pull state, query RL, scale ASG, log in RDS |
 | `POST` | `/api/v1/scaling/feedback` | Ingest post-scaling latency and record RL experience reward |
 | `GET` | `/api/v1/scaling/history` | Query audit trail of past scaling actions and rewards |
+| `GET` | `/api/v1/scaling/aws/preflight` | Read-only AWS identity, target, capacity, health and activity checks |
 
 ---
 
-## 5. Simulating Traffic Spikes & Live Auto-Scaling
+## 5. Simulating Traffic Spikes (AWS mutations disabled)
 
 To test the backend under festival flash-sale traffic surges:
 ```bash
 python3 scripts/simulate_traffic.py --rounds 15 --delay 0.3
 ```
-This script creates a multi-phase surge (baseline -> flash sale flood -> cooldown), executes checkouts, feeds CloudWatch metrics, triggers the RL scaling orchestrator, and shows the cluster automatically scaling instances up and down!
+This script creates a multi-phase synthetic surge and records policy decisions. It sends `apply_to_aws=false`; it does not change mock or real AWS capacity. For real AWS configuration, IAM requirements, read-only preflight and explicitly approved live-test steps, see [AWS_INTEGRATION_GUIDE.md](AWS_INTEGRATION_GUIDE.md).
 
 ---
 
 ## 6. Running Automated Tests
 
-Run the complete test suite with pytest:
+Run the complete test suite with pytest (Windows PowerShell):
 ```bash
-python3 -m pytest -c pytest.ini tests/ -v
+py -3.12 -m pytest -p no:cacheprovider tests/ -q
 ```
-*(All 21 unit and integration tests run in an isolated in-memory environment and execute in ~2 seconds).*
+The suite currently contains 29 passing unit and integration tests. They use isolated in-memory SQLite fixtures; these results verify mock/offline behavior, not authenticated AWS access.
