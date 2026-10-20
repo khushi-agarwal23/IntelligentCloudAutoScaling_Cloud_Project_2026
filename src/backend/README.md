@@ -1,6 +1,6 @@
-# Intelligent Cloud Auto-Scaling — Backend Subsystem (Ivy Gupta)
+# Intelligent Cloud Auto-Scaling — Backend
 
-High-performance, asynchronous REST API backend and Amazon RDS database layer for the **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**.
+FastAPI and SQLAlchemy backend for the **Intelligent Cloud Auto-Scaling Framework for E-Commerce Festival Sales Using Reinforcement Learning**. Local development uses SQLite; cloud database and AWS credentials are deployment concerns.
 
 ---
 
@@ -74,30 +74,30 @@ src/backend/
 
 ### Step 1: Install Dependencies
 ```bash
-cd src/backend
-python3 -m pip install -r requirements.txt
+Set-Location src\backend
+py -3.12 -m pip install -r requirements.txt
 ```
 
 ### Step 2: Configure Environment
 ```bash
-cp .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env } else { Write-Host 'Preserving existing .env' }
 ```
-*(By default, `.env.example` is pre-configured with `USE_SQLITE=true` and `AWS_MOCK_MODE=true` for instant zero-config testing without needing live AWS credentials).*
+*(`.env.example` uses SQLite, `AWS_MOCK_MODE=true`, and disabled live-scaling gates. Local development and automated tests stay in mock mode. The AWS integration guide documents an owner-controlled read-only preflight and live-test procedure.)*
 
 ### Step 3: Initialize Database & Seed Synthetic Festival Data
 ```bash
 # Create schema tables
-python3 scripts/init_db.py
+py -3.12 scripts/init_db.py
 
 # Seed festival users, flash sale orders, metrics, and scaling decisions
-python3 scripts/seed_data.py
+py -3.12 scripts/seed_data.py
 ```
 
 ### Step 4: Launch Backend Server
 ```bash
-python3 run.py
+py -3.12 run.py
 # or directly via uvicorn:
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Interactive Swagger API documentation is available at: **http://127.0.0.1:8000/docs**
@@ -130,17 +130,19 @@ Interactive Swagger API documentation is available at: **http://127.0.0.1:8000/d
 ### Workload Telemetry (CloudWatch / ELB Metrics)
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/v1/workload/metrics` | Ingest real-time CPU %, Memory %, Req/s, Latency |
+| `POST` | `/api/v1/workload/metrics` | Ingest caller-provided values, labeled `manual_simulated` |
 | `POST` | `/api/v1/workload/batch` | Bulk ingest historical / stream metrics |
 | `GET` | `/api/v1/workload/latest` | Retrieve latest system telemetry |
 | `GET` | `/api/v1/workload/history` | Historical metrics time-series |
 | `GET` | `/api/v1/workload/state` | Smoothed rolling state vector for the RL agent |
+| `GET` | `/api/v1/workload/aws/current` | Fetch current read-only CloudWatch telemetry when configured |
 
 ### AI / RL Auto-Scaling Orchestrator (Arpita's RL Module)
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/v1/scaling/decision` | Evaluate RL policy decision without modifying ASG |
 | `POST` | `/api/v1/scaling/evaluate-and-act` | Complete loop: pull state, query RL, scale ASG, log in RDS |
+| `POST` | `/api/v1/scaling/evaluate-cloudwatch` | Evaluate fresh CloudWatch telemetry; writes require explicit gates and request opt-in |
 | `POST` | `/api/v1/scaling/feedback` | Ingest post-scaling latency and record RL experience reward |
 | `GET` | `/api/v1/scaling/history` | Query audit trail of past scaling actions and rewards |
 | `GET` | `/api/v1/scaling/aws/preflight` | Read-only AWS identity, target, capacity, health and activity checks |
@@ -159,8 +161,8 @@ This script creates a multi-phase synthetic surge and records policy decisions. 
 
 ## 6. Running Automated Tests
 
-Run the complete test suite with pytest (Windows PowerShell):
+Run the complete test suite with pytest (from `src/backend`, Windows PowerShell):
 ```bash
 py -3.12 -m pytest -p no:cacheprovider tests/ -q
 ```
-The suite currently contains 29 passing unit and integration tests. They use isolated in-memory SQLite fixtures; these results verify mock/offline behavior, not authenticated AWS access.
+Tests use isolated in-memory SQLite fixtures and force `AWS_MOCK_MODE=true`. Results verify local policy/API behavior only; they do not establish AWS access or live Auto Scaling behavior. See [project readiness](../../docs/project-readiness.md) for the latest command and result.

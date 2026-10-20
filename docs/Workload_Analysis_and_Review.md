@@ -28,6 +28,50 @@ Training-only p95 thresholds for the original 60% training period are 56.43% CPU
 
 Plot: `results/alibaba2018_workload_overview.png`, reproducible with `py -3.12 scripts/plot_alibaba2018_workload.py`.
 
+### Reproducible peak episode identification
+
+The dataset-wide peak scan uses the verified local `data/alibaba2018/processed/machine_timeseries.csv`, produced by `scripts/preprocess_alibaba2018.py` from the Alibaba 2018 `machine_usage.csv` schema (`timestamp`, `cpu_util_percent`, and `mem_util_percent`, aggregated to `cpu_mean` and `memory_mean`). The source archive and extracted raw CSV are present at the documented ignored paths. The scan reads the processed aggregate directly and does not create synthetic workload rows. Its timestamps remain trace-relative seconds, not wall-clock dates.
+
+The reproducible default method computes separate full-series p95 thresholds and identifies each maximal consecutive run at or above the threshold. Any non-median-cadence timestamp gap splits runs. Event duration is sample count times the 10-second median cadence; each CSV row reports start/end, peak timestamp/intensity, mean intensity, threshold/method, duration and sample count. This is a descriptive full-series scan; do not use its full-series threshold to claim held-out policy performance. Outputs are `data/alibaba2018/processed/peak_events.csv` and `results/alibaba2018_detected_peaks.png`.
+
+On the current 67,242-row processed input (timestamps 0–691,190 seconds), p95 is 55.5225% CPU and 91.9324% memory. The scan found 443 CPU and 231 memory peak episodes. The strongest CPU sample is 79.8485% at trace timestamp 626,000 seconds; the strongest memory sample is 95.3831% at 666,160 seconds. Longest episodes are 1,310 seconds for CPU (540,370–541,670) and 2,320 seconds for memory (670,490–672,800). These are cluster-wide utilization patterns, not e-commerce demand, AWS telemetry, or capacity requirements.
+
+Run from the repository root with the project Python environment:
+
+```powershell
+py -3.12 scripts/analyze_alibaba2018_peaks.py
+py -3.12 -m pytest -p no:cacheprovider src/backend/tests/test_alibaba2018_peaks.py -q
+```
+
+To relate peaks to the existing Alibaba-trained Q-learning policy, match each event’s trace-relative start/end timestamps to the rows in `data/alibaba2018/processed/alibaba2018_rl_evaluation.csv`, then compare the policy’s `action`, `instances_before/after`, and proxy reward with the threshold and persistence actions over the same peak windows. For an honest held-out result, only count events overlapping the Q-learning test segment and report them separately from whole-test metrics. That evaluation remains an offline simulation with assumed rewards and capacity bounds; it says nothing about live AWS scaling. The application’s regular Q-table is a separate model and must not be described as Alibaba-trained.
+
+### Peak-window Q-learning comparison
+
+The existing `alibaba2018_rl_evaluation.csv` records the Q-learning, threshold, and persistence policies on the same 7,962 held-out trace timestamps from 611,570 through 691,180 seconds at 10-second cadence. These are trace-relative seconds, matching the `timestamp` and peak-event timestamps; they are not UTC times. The comparison script additionally joins every saved policy observation to `machine_timeseries.csv` and verifies both CPU and memory values before using it. All 7,962 Q-learning rows aligned successfully. Of those, 2,760 timestamps (34.67%) overlap at least one detected full-series p95 event; 509 overlap CPU events and 2,513 overlap memory events (262 timestamps overlap both).
+
+Reproduce the comparison after regenerating the peak events and Q-learning evaluation CSV:
+
+```powershell
+py -3.12 scripts/analyze_alibaba2018_peaks.py
+py -3.12 scripts/train_alibaba2018_rl.py
+py -3.12 scripts/compare_alibaba2018_peaks_to_policy.py
+py -3.12 -m pytest -p no:cacheprovider src/backend/tests/test_alibaba2018_peak_policy.py -q
+```
+
+The comparison is saved at `data/alibaba2018/processed/peak_policy_comparison.csv`. Action counts below are ordered scale-up / hold / scale-down; capacity changes are ordered increase / unchanged / decrease.
+
+| Policy | Peak N | Peak actions | Peak capacity changes | Peak mean reward | Non-peak N | Non-peak actions | Non-peak capacity changes | Non-peak mean reward |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Q-learning | 2,760 | 2,760 / 0 / 0 | 0 / 2,760 / 0 | 2.0000 | 5,202 | 3,278 / 1,815 / 109 | 7 / 5,189 / 6 | 1.9994 |
+| Threshold | 2,760 | 2,760 / 0 / 0 | 0 / 2,760 / 0 | 2.0000 | 5,202 | 3,278 / 1,815 / 109 | 7 / 5,189 / 6 | 1.9994 |
+| Persistence | 2,760 | 0 / 2,760 / 0 | 0 / 2,760 / 0 | -1.0000 | 5,202 | 0 / 5,202 / 0 | 0 / 5,202 / 0 | 0.0886 |
+
+Thus, during every detected peak sample, Q-learning and the threshold policy chose scale-up, but the capacity count increased zero times: both were already at the simulated maximum of 3 instances. Q-learning averaged 3 instances before and after peak actions, compared with 2.873 before and after non-peak actions. During non-peak samples it chose scale-up 3,278 times (63.01%), hold 1,815 times (34.89%), and scale-down 109 times (2.10%); capacity increased 7 times, stayed unchanged 5,189 times, and decreased 6 times. This separates scale-up action intent from an actual capacity change at the simulator’s upper bound.
+
+Across the entire 7,962-row held-out segment, the saved Q-learning and threshold action sequences match at every timestamp. The comparison CSV reports per-window action matches against Q-learning so this agreement is reproducible; persistence matches only at held-out rows where Q-learning also holds.
+
+Mean proxy reward was 2.0000 during peak samples and 1.9994 outside them. These are values from the experiment’s assumption-based reward function, not measured cloud cost, service performance, or an independent quality metric. The observed policy frequently requests scale-up during detected peaks but is already at its maximum in every such row; this comparison does not demonstrate that more capacity would improve outcomes. It also does not test live AWS or the application’s separately configured Q-table. Peak windows use thresholds computed on the full series for descriptive pattern identification, so peak/non-peak labels here are not a held-out threshold-selection experiment.
+
 ## Forecast method and results
 
 The one-step horizon is 10 seconds. Persistence predicts the next observation using the most recently observed CPU/memory value. Random Forest uses lag features 1, 2, 3, and 6 for both signals, with 100 trees, max depth 12, minimum leaf size 5, and random seed 42. Evaluation rows are chronologically divided 60% train, 20% validation, and 20% test. Fixed Random Forest settings are evaluated on validation; the final model is refit on train plus validation and evaluated once on the untouched final test segment. MAE and RMSE are in percentage points.
@@ -97,6 +141,79 @@ Read [the AWS integration guide](../src/backend/AWS_INTEGRATION_GUIDE.md) for mo
 - The Q-table's proxy reward and experiment dynamics are not an AWS simulator and do not prove RL superiority.
 - Live AWS validation remains blocked until valid temporary/profile/role credentials are available, read access succeeds, the write policy is confirmed by an AWS administrator, and the user explicitly approves each live action.
 
+## Revised Alibaba Q-learning objective experiment
+
+The earlier `alibaba2018_rl_evaluation.csv` and `peak_policy_comparison.csv` are preserved historical artifacts. The revised experiment is separate and writes `alibaba2018_objective_evaluation.csv`, `alibaba2018_objective_summary.csv`, and `models/alibaba2018_q_table_objective_v2.pkl`; it does not overwrite the historical outputs, `models/alibaba2018_q_table.pkl`, or the frontend/backend application Q table.
+
+Run from the repository root with the project Python environment:
+
+```powershell
+py -3.12 scripts/evaluate_alibaba2018_objective.py
+py -3.12 -m pytest -p no:cacheprovider src/backend/tests/test_alibaba2018_objective_eval.py -q
+```
+
+The script reuses the existing chronological Alibaba split: the Q learner is trained on training data, threshold candidates are formed only from training CPU/memory quantiles, and the threshold candidate minimizing the validation objective is selected before either policy is evaluated on the same untouched test interval. Evaluation tie-breaking is deterministic. The local random generator uses seed 42 for training. The held-out comparison also includes persistence as a reference.
+
+The objective is intentionally labeled as an offline proxy, with relative cost units per 10-second trace sample:
+
+- A utilization-constraint violation is an observed sample at/above CPU or memory p95 computed on the training segment. This is a statistical utilization boundary, **not a measured service-level objective or a known production SLA**.
+- Capacity cost is one normalized unit per simulated instance per sample (`instances_after`); it is not an AWS price estimate.
+- An infeasible scale request at min/max incurs five units. It does not change capacity and is reported separately from a feasible capacity change.
+- A feasible capacity change incurs 0.25 units. The reward is the negative sum of these costs, including ten units for an observed utilization-boundary violation.
+
+Each CSV row reports requested action, resulting simulated capacity, feasible capacity change, infeasible request, observed utilization-boundary violation, each cost component, total objective cost, and reward. Summary output separately totals reward/cost, capacity instance-samples, violations, requested action counts, feasible changes, and infeasible actions.
+
+Critical limitation: the Alibaba trace has no post-scaling counterfactuals, service latency, application demand, or causal relationship between changing the simulated instance count and subsequent cluster CPU/memory. The replay therefore keeps observed trace values fixed after actions. The violation count is the same exogenous workload trace observed by each policy; it cannot establish that Q-learning or threshold scaling reduces violations. The comparison can establish reproducible policy behavior and simulated capacity occupancy under the stated bounds/objective only. It cannot demonstrate production SLA attainment, financial savings, scale effectiveness, or AWS performance. Do not describe this as an AWS result or as an outcome-validated RL advantage.
+
+### Current objective-run results
+
+The reproducible run on the current processed Alibaba trace selected training-only p95 proxy limits of CPU 55.6684% and memory 91.3679%. The validation-selected threshold rule used CPU low/high 29.3952/51.6174 and memory low/high 86.9513/90.8177. All policies were evaluated on the same 7,962 held-out samples, with initial capacity 2 and bounds 1–3.
+
+| Policy | Total proxy reward | Capacity cost (instance-samples) | Observed utilization-boundary violations | Requested down / hold / up | Feasible down / up changes | Infeasible requests | Ending instances |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Q-learning | -51,724.50 | 15,020 | 3,547 | 2,469 / 3,024 / 2,469 | 2,469 / 2,469 | 0 | 2 |
+| Threshold | -82,013.25 | 23,155 | 3,547 | 98 / 3,272 / 4,592 | 6 / 7 | 4,677 | 3 |
+| Persistence | -51,394.00 | 15,924 | 3,547 | 0 / 7,962 / 0 | 0 / 0 | 0 | 2 |
+
+The identical violation count is expected: violations come from the fixed observed trace, not from an estimated response to capacity. Under this accounting objective, Q-learning has 904 fewer capacity instance-samples than persistence, but its total proxy cost is 330.50 higher because its 4,938 feasible transitions incur transition cost. It has 30,288.75 lower cost than the validation-tuned threshold policy, largely because that policy repeatedly requests scale-up at the upper bound and incurs infeasible-action penalties. These are comparisons of this implementation and proxy objective, not evidence that Q-learning serves users better or saves real money. They also do not demonstrate the threshold policy is generally inferior: its rule family/grid and this objective define the comparison.
+
+The Q learner's requested scale-down/up actions each produced 2,469 feasible changes; it requested no infeasible action in this run. The threshold requested 4,592 scale-ups but only seven feasible increases, and made 4,677 infeasible requests in total. The detail CSV separates requests, changes, and costs so this behavior can be inspected per timestamp.
+
+## Existing PPO checkpoint on the Alibaba held-out interval
+
+The saved PPO checkpoint was evaluated separately using the same chronological
+Alibaba test interval and proxy objective as the Alibaba Q-learning experiment.
+Reproduce it from the repository root with:
+
+```powershell
+py -3.12 evaluation/compare_ppo_alibaba.py
+py -3.12 -m pytest -p no:cacheprovider src/backend/tests/test_ppo_alibaba_evaluation.py -q
+```
+
+The run used seed 42, 7,962 held-out samples per policy, bounds 1–3, CPU p95
+55.6684% and memory p95 91.3679% derived from training only, and a threshold
+selected on validation only. It created
+`evaluation/results/alibaba2018_ppo_holdout.csv` and
+`evaluation/results/alibaba2018_ppo_holdout_summary.csv`. PPO inference was
+deterministic; the PPO checkpoint was not retrained.
+
+| Policy | Proxy reward | Capacity instance-samples | Observed boundary violations | Requested down / hold / up | Feasible changes | Infeasible actions |
+|---|---:|---:|---:|---:|---:|---:|
+| PPO checkpoint | -99,161.25 | 23,886 | 3,547 | 0 / 0 / 7,962 | 1 | 7,961 |
+| Alibaba Q-learning | -51,724.50 | 15,020 | 3,547 | 2,469 / 3,024 / 2,469 | 4,938 | 0 |
+| Validation-tuned threshold | -82,013.25 | 23,155 | 3,547 | 98 / 3,272 / 4,592 | 13 | 4,677 |
+| Persistence | -51,394.00 | 15,924 | 3,547 | 0 / 7,962 / 0 | 0 | 0 |
+
+PPO requested scale-up on every sample, reached three instances after one
+feasible increase, and then made 7,961 infeasible requests. Its objective score
+was worst among these policies. This replay demonstrates the checkpoint's
+behavior under the explicitly stated model, and is a reason not to promote it
+to the 1–3 instance controller. CPU and memory are trace observations; request
+rate and latency in the PPO observations are estimates from the existing
+`WorkloadSimulator` formulas. The violation count is exogenous and identical
+across policies. None of these values are measured AWS service outcomes, and
+this does not verify live PPO scaling.
+
 ## Short presentation outline
 
 1. **Problem and contribution:** workload analysis, prediction, frontend/backend integration, safety-focused cloud control.
@@ -140,3 +257,54 @@ Open `http://127.0.0.1:5501/src/frontend/index.html`, click Normal and Festival 
 5. Mock test run showing passing tests; label it mock.
 6. Once credentials work, read-only preflight with expected group/template/bounds/health. Redact account-sensitive fields as needed.
 7. Only after separate approvals, AWS Console before/after ASG desired/current capacity and healthy instances plus backend logged response. Label these approved live AWS evidence.
+## PPO training and evaluation audit (2026-10-21)
+
+The historical `models/best_ppo_model.zip` has 10 float observation features
+and `Discrete(3)` actions. It stores an active-instance observation high bound
+of 50, while current `training/hyperparams.yaml` constructs max capacity 20.
+The checkpoint contains no recoverable historical environment config or
+normalizer. Low, normal, and high deterministic sample inputs all selected
+scale-up. The exact historical training cause is unknown, so that artifact was
+not modified.
+
+A new reproducible Alibaba trainer and a separate normalized checkpoint were
+added. The new config sets capacity 1–3, uses the existing PPOAgent wrapper,
+trains for 100,000 steps on 37,157 chronological training rows, and selects its
+checkpoint on three fixed validation windows. The 7,962-row test segment is
+used only by the final comparison. The new model uses fixed feature scaling
+to [0,1]; the backend adapter applies it only when the selected checkpoint
+stores a [0,1] observation space. The original PPO checkpoint retains its raw
+feature contract.
+
+Reproduce with:
+
+```powershell
+py -3.12 training/train_alibaba2018_ppo.py
+py -3.12 evaluation/compare_retrained_ppo_alibaba.py
+py -3.12 -m pytest -p no:cacheprovider src/backend/tests/test_alibaba_ppo_v2.py src/backend/tests/test_ppo_alibaba_evaluation.py src/backend/tests/test_ppo_policy.py src/backend/tests/test_rl_agents.py -q
+```
+
+The final normalized run had validation mean return -3,456 at every 10,000-step
+checkpoint. On the same held-out interval, PPO held at two instances on all
+7,962 samples and matched persistence exactly: proxy reward -95,544, capacity
+cost 15,924 instance-samples, zero feasible changes, and zero infeasible
+requests. It did not improve on the Q baseline's proxy reward -87,582.25 (one
+feasible scale-down to one instance, then hold). The validation-tuned threshold
+had proxy reward -126,163.25 and 4,677 infeasible requests.
+
+| Policy | Estimated latency SLA violations | Mean / p95 estimated latency after action | Observed CPU/memory boundary violations | Capacity steps at 1 / 2 / 3 | Requested down / hold / up |
+|---|---:|---:|---:|---:|---:|
+| Retrained PPO | 7,962 (100%) | 3,541.43 / 4,664 ms | 3,547 | 0 / 7,962 / 0 | 0 / 7,962 / 0 |
+| Q-learning baseline | 7,962 (100%) | 4,986.17 / 5,000 ms | 3,547 | 7,962 / 0 / 0 | 1 / 7,961 / 0 |
+| Threshold | 7,962 (100%) | 2,519.66 / 3,855.39 ms | 3,547 | 343 / 45 / 7,574 | 98 / 3,272 / 4,592 |
+| Persistence | 7,962 (100%) | 3,541.43 / 4,664 ms | 3,547 | 0 / 7,962 / 0 | 0 / 7,962 / 0 |
+
+The CPU/memory boundary count is fixed from observed trace percentiles and is
+identical by definition. The latency estimate is also 100% violating because
+the existing CPU-to-request-rate mapping estimates every held-out sample above
+the capacity of even three 100-request/second instances. This reveals a
+calibration limitation in the simulator assumptions; it does not establish an
+actual application SLA failure. Request rate and latency are estimates, not
+Alibaba trace columns or measured AWS outcomes. The model remains an offline
+candidate and has no demonstrated held-out improvement. Live Q-learning
+behavior and all AWS settings were left unchanged.

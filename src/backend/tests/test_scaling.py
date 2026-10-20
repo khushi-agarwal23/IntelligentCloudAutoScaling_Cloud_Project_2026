@@ -65,7 +65,7 @@ def test_scaling_history(client):
         "memory_percent": 25.0,
         "request_rate": 10.0,
         "response_time_ms": 120.0,
-        "instance_count": 4,
+        "instance_count": 3,
         "error_rate": 0.0
     })
 
@@ -105,6 +105,47 @@ def test_mock_preflight_reports_bounds_and_simulated_identity(client):
     assert data["capacity"]["minimum"] == 1
     assert data["capacity"]["maximum"] == 3
     assert data["capacity"]["action_allowed"] is True
+
+
+def test_live_preflight_reports_live_unavailable_without_mock_fallback(client, monkeypatch):
+    from app.config import settings
+    from app.services.aws_asg_client import aws_client
+
+    monkeypatch.setattr(settings, "AWS_MOCK_MODE", False)
+    monkeypatch.setattr(aws_client, "mock_mode", False)
+    monkeypatch.setattr(aws_client, "_client", None)
+    monkeypatch.setattr(aws_client, "_sts_client", None)
+    monkeypatch.setattr(aws_client, "_initialization_error", "NoCredentialsError")
+
+    response = client.get("/api/v1/scaling/aws/preflight")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "live"
+    assert data["ready"] is False
+    assert data["identity"]["verified"] is False
+    assert data["errors"] == ["NoCredentialsError"]
+    assert data["health"].get("simulated") is not True
+    assert data["runtime"]["configured_mock_mode"] is False
+    assert data["runtime"]["client_mock_mode"] is False
+
+
+def test_preflight_fails_closed_when_initialized_client_mode_is_stale(client, monkeypatch):
+    from app.config import settings
+    from app.services.aws_asg_client import aws_client
+
+    monkeypatch.setattr(settings, "AWS_MOCK_MODE", False)
+    monkeypatch.setattr(aws_client, "mock_mode", True)
+
+    response = client.get("/api/v1/scaling/aws/preflight")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "configuration_error"
+    assert data["ready"] is False
+    assert data["errors"] == ["AWSModeConfigurationMismatch"]
+    assert data["runtime"]["configured_mock_mode"] is False
+    assert data["runtime"]["client_mock_mode"] is True
 
 
 def test_live_mutation_requires_backend_opt_in(client, monkeypatch):

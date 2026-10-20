@@ -58,7 +58,8 @@ def get_local_rl_agent():
 def fallback_scaling_decision(state: Dict[str, Any]) -> Dict[str, Any]:
     """Existing heuristic policy used if no RL model is available."""
     cpu = float(state.get("cpu_percent", 0.0))
-    memory = float(state.get("memory_percent", 0.0))
+    memory_value = state.get("memory_percent")
+    memory = float(memory_value) if memory_value is not None else None
     request_rate = float(state.get("request_rate", 0.0))
     response_time = float(state.get("response_time_ms", 0.0))
     instances = max(1, int(state.get("instance_count", 1)))
@@ -66,7 +67,7 @@ def fallback_scaling_decision(state: Dict[str, Any]) -> Dict[str, Any]:
 
     if (
         cpu >= 75.0
-        or memory >= 80.0
+        or (memory is not None and memory >= 80.0)
         or response_time >= 800.0
         or request_rate >= instances * 80.0
         or error_rate >= 5.0
@@ -87,7 +88,7 @@ def fallback_scaling_decision(state: Dict[str, Any]) -> Dict[str, Any]:
 
     if (
         cpu <= 30.0
-        and memory <= 40.0
+        and memory is not None and memory <= 40.0
         and response_time <= 350.0
         and request_rate <= instances * 25.0
         and instances > 1
@@ -178,6 +179,17 @@ def local_rl_decision(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def query_rl_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """Prefer a configured RL service, then the local Q-table, then heuristic."""
+    if settings.SCALING_POLICY.strip().lower() == "ppo_candidate":
+        from fastapi import HTTPException
+        from .ppo_policy import PPOPolicyError, ppo_decision
+        try:
+            return ppo_decision(state)
+        except PPOPolicyError as exc:
+            logger.error("PPO candidate inference failed closed: %s", exc)
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if settings.SCALING_POLICY.strip().lower() != "q_learning":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="SCALING_POLICY must be q_learning or ppo_candidate.")
     if settings.AI_SERVICE_URL:
         try:
             with httpx.Client(timeout=settings.AI_TIMEOUT_SECONDS) as client:
