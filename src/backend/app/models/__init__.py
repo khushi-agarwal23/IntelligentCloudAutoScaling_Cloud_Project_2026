@@ -2,14 +2,11 @@ from .user import User
 from .transaction import Transaction
 from .workload import WorkloadMetric
 from .scaling import ScalingDecision
+from .telemetry import TelemetrySnapshot, ReplayReceipt
 
-# Alias for backwards compatibility
 Metric = WorkloadMetric
 
 __all__ = [
-    "User",
-    "Transaction",
-    "WorkloadMetric",
-    "Metric",
-    "ScalingDecision",
+    "User", "Transaction", "WorkloadMetric", "Metric", "ScalingDecision",
+    "TelemetrySnapshot", "ReplayReceipt",
 ]

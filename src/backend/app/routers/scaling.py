@@ -1,9 +1,13 @@
+import logging
+import json
+import os
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 from ..database import get_db
 from ..models.scaling import ScalingDecision
+from ..models.telemetry import TelemetrySnapshot
 from ..schemas.scaling import (
     ScalingDecisionRequest,
     ScalingDecisionResponse,
@@ -11,11 +15,44 @@ from ..schemas.scaling import (
     EvaluateAndActResponse,
     FeedbackRequest,
 )
-from ..services.ai_client import query_rl_agent, send_rl_feedback
+from ..services.ai_client import send_rl_feedback
 from ..services.aws_asg_client import aws_client
 from ..services.workload_service import compute_workload_state
+from ..services.scaling_controller import evaluate_and_apply
+from ..services.cloudwatch_telemetry import cloudwatch_telemetry, TelemetryUnavailable
+from ..config import settings
 
 router = APIRouter(prefix="/scaling", tags=["AI/RL Auto-Scaling"])
+logger = logging.getLogger("backend.routers.scaling")
+
+
+@router.get("/aws/preflight")
+def aws_read_only_preflight(
+    requested_action: str = Query("maintain", pattern="^(maintain|scale_up|scale_down)$"),
+):
+    """Read-only AWS identity, ASG configuration, capacity and health check."""
+    runtime = {
+        "process_id": os.getpid(),
+        "configured_mock_mode": settings.AWS_MOCK_MODE,
+        "client_mock_mode": aws_client.mock_mode,
+    }
+    if bool(settings.AWS_MOCK_MODE) != bool(aws_client.mock_mode):
+        logger.error("AWS mode mismatch between settings and initialized client: %s", runtime)
+        return {
+            "mode": "configuration_error",
+            "ready": False,
+            "identity": {"verified": False},
+            "target": {"region": settings.AWS_REGION, "auto_scaling_group": settings.AWS_ASG_NAME},
+            "capacity": {"requested_action": requested_action, "action_allowed": False},
+            "health": {"all_healthy": False, "simulated": False},
+            "in_progress_activities": [],
+            "permissions": {"read_only_preflight": "not attempted due to configuration mismatch"},
+            "errors": ["AWSModeConfigurationMismatch"],
+            "runtime": runtime,
+        }
+    result = aws_client.preflight(requested_action=requested_action)
+    result["runtime"] = runtime
+    return result
 
 
 @router.post("/decision", response_model=ScalingDecisionResponse)
@@ -25,83 +62,65 @@ def evaluate_scaling_decision(req: ScalingDecisionRequest, db: Session = Depends
     logging the decision in Amazon RDS without directly altering cloud infrastructure.
     """
     state = req.model_dump()
-    raw_decision = query_rl_agent(state)
-
-    decision = ScalingDecision(
-        action=raw_decision.get("action", "maintain"),
-        current_instances=raw_decision.get("current_instances", req.instance_count),
-        desired_instances=raw_decision.get("desired_instances", req.instance_count),
-        reason=raw_decision.get("reason", "RL policy evaluation"),
-        confidence=raw_decision.get("confidence", 0.0),
-        triggered_by=raw_decision.get("triggered_by", "rl_agent")
-    )
-    db.add(decision)
-    db.commit()
-    db.refresh(decision)
-    return decision
+    return evaluate_and_apply(
+        db, state, telemetry_source="manual_simulated",
+        provenance={"source": "api_request", "simulated": True},
+        apply_to_aws=False,
+    )["decision"]
 
 
 @router.post("/evaluate-and-act", response_model=EvaluateAndActResponse)
 def evaluate_and_act(req: EvaluateAndActRequest, db: Session = Depends(get_db)):
     """
-    Core orchestrator:
-    1. Collects live workload metrics (from request or smoothed DB telemetry).
-    2. Sends state to the AI/RL model.
-    3. Triggers AWS Auto Scaling Group capacity adjustments.
-    4. Persists the scaling decision audit trail in Amazon RDS.
+    Evaluate provided simulated metrics or recorded workload data. AWS-backed
+    decisions must use the dedicated CloudWatch endpoint.
     """
-    # 1. State compilation
-    if req.cpu_percent is not None and req.memory_percent is not None:
+    if req.cpu_percent is not None:
         state = {
             "cpu_percent": req.cpu_percent,
             "memory_percent": req.memory_percent,
-            "request_rate": req.request_rate or 0.0,
-            "response_time_ms": req.response_time_ms or 0.0,
-            "instance_count": req.current_instances or aws_client.get_current_capacity(),
-            "error_rate": 0.0
+            "request_rate": req.request_rate,
+            "response_time_ms": req.response_time_ms,
+            "instance_count": req.current_instances or settings.AWS_EXPECTED_MIN_SIZE,
+            "error_rate": 0.0,
         }
+        source, provenance = "manual_simulated", {"source": "api_request", "simulated": True}
     else:
         state = compute_workload_state(db)
-        if req.current_instances:
-            state["instance_count"] = req.current_instances
-        else:
-            state["instance_count"] = aws_client.get_current_capacity()
+        source, provenance = state.pop("telemetry_source", "manual_simulated"), state.pop("data_provenance", {"simulated": True})
+        state["instance_count"] = req.current_instances or state["instance_count"]
+    return evaluate_and_apply(db, state, telemetry_source=source, provenance=provenance, apply_to_aws=req.apply_to_aws)
 
-    # 2. RL Model Decision
-    raw_decision = query_rl_agent(state)
-    action = raw_decision.get("action", "maintain")
-    desired = int(raw_decision.get("desired_instances", state["instance_count"]))
 
-    # 3. Apply to AWS ASG if action requires scaling and enabled
-    aws_applied = False
-    aws_msg = "No scaling required (maintain state)."
-
-    if req.apply_to_aws and action in ["scale_up", "scale_down", "scale_out", "scale_in"]:
-        aws_res = aws_client.set_desired_capacity(desired)
-        aws_applied = aws_res.get("success", False)
-        aws_msg = aws_res.get("message", "")
-    elif not req.apply_to_aws:
-        aws_msg = "AWS ASG execution bypassed (apply_to_aws=False)."
-
-    # 4. Log in Amazon RDS
-    decision = ScalingDecision(
-        action=action,
-        current_instances=state["instance_count"],
-        desired_instances=desired,
-        reason=raw_decision.get("reason", "RL orchestrator decision"),
-        confidence=raw_decision.get("confidence", 0.0),
-        triggered_by=raw_decision.get("triggered_by", "rl_agent")
+@router.post("/evaluate-cloudwatch", response_model=EvaluateAndActResponse)
+def evaluate_cloudwatch(req: EvaluateAndActRequest, db: Session = Depends(get_db)):
+    """Collect fresh AWS telemetry, persist its provenance, then evaluate the existing Q policy."""
+    try:
+        collected = cloudwatch_telemetry.collect()
+    except TelemetryUnavailable as exc:
+        detail = {"code": exc.code, "message": str(exc), "aws_mutation_attempted": False}
+        if exc.diagnostics:
+            detail["diagnostics"] = exc.diagnostics
+        raise HTTPException(status_code=503, detail=detail) from exc
+    metrics, provenance = collected["metrics"], collected["provenance"]
+    snapshot = TelemetrySnapshot(
+        telemetry_source="aws_cloudwatch",
+        metrics_json=json.dumps(metrics, separators=(",", ":"), sort_keys=True),
+        provenance_json=json.dumps(provenance, separators=(",", ":"), sort_keys=True),
     )
-    db.add(decision)
+    db.add(snapshot)
     db.commit()
-    db.refresh(decision)
-
-    return {
-        "decision": decision,
-        "aws_applied": aws_applied,
-        "aws_message": aws_msg,
-        "db_logged": True
-    }
+    db.refresh(snapshot)
+    result = evaluate_and_apply(
+        db,
+        {"cpu_percent": metrics["cpu_percent"], "memory_percent": metrics["memory_percent"],
+         "request_rate": metrics["request_rate"], "response_time_ms": metrics["response_time_ms"],
+         "instance_count": metrics["current_instances"], "error_rate": metrics["error_rate"]},
+        telemetry_source="aws_cloudwatch", provenance=provenance,
+        apply_to_aws=req.apply_to_aws,
+    )
+    result["telemetry_snapshot_id"] = snapshot.id
+    return result
 
 
 @router.post("/feedback")

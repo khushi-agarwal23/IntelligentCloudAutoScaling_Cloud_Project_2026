@@ -1,0 +1,6 @@
+threshold_percentile,cpu_threshold,memory_threshold,validation_scale_up_count,validation_scale_up_rate_percent,validation_high_utilization_count,validation_true_positive,validation_false_positive,validation_false_negative,validation_true_negative,validation_precision_percent,validation_recall_percent,validation_f1_percent,test_scale_up_count,test_scale_up_rate_percent,test_high_utilization_count,test_true_positive,test_false_positive,test_false_negative,test_true_negative,test_precision_percent,test_recall_percent,test_f1_percent,selected_on_validation
+75,44.9461,89.7344,4740,44.65,4740,4308,432,432,5443,90.89,90.89,90.89,6557,61.77,6559,6313,244,246,3812,96.28,96.25,96.26,True
+80,47.0935,90.049,3663,34.51,3663,3274,389,389,6563,89.38,89.38,89.38,5987,56.4,5989,5755,232,234,4394,96.12,96.09,96.11,False
+85,49.6104,90.4053,2594,24.44,2594,2211,383,383,7638,85.24,85.24,85.24,5404,50.91,5406,5177,227,229,4982,95.8,95.76,95.78,False
+90,52.636,90.8022,1649,15.53,1649,1413,236,236,8730,85.69,85.69,85.69,4610,43.43,4612,4358,252,254,5751,94.53,94.49,94.51,False
+95,56.4308,91.3806,775,7.3,775,625,150,150,9690,80.65,80.65,80.65,3530,33.25,3532,3303,227,229,6856,93.57,93.52,93.54,False

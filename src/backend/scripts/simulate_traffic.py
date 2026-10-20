@@ -110,7 +110,8 @@ def run_simulation(base_url: str = "http://127.0.0.1:8000", rounds: int = 15, de
                 "request_rate": round(req_rate, 1),
                 "response_time_ms": round(latency, 1),
                 "current_instances": current_instances,
-                "apply_to_aws": True
+                # Offline traffic simulations must never change real AWS.
+                "apply_to_aws": False
             }
             eval_res = client.post("/api/v1/scaling/evaluate-and-act", json=eval_payload)
             if eval_res.status_code == 200:
