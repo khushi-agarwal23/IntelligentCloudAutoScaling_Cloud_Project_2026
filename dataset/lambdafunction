@@ -1,1 +1,149 @@
+import json
+import csv
+import io
+import boto3
+from botocore.exceptions import ClientError
+
+S3_BUCKET = "student2-workload-trace-20261015-k7p4"
+CSV_KEY = "workload.csv"
+STATE_KEY = "state.json"
+SCHEDULE_NAME = "student2-trace-replay-every-minute"
+SCHEDULE_GROUP = "default"
+
+ASG_NAME = "rl-autoscaling-group"
+METRIC_NAMESPACE = "Student2/WorkloadSimulation"
+METRIC_NAME = "EstimatedCPUUtilization"
+
+CAPACITY_PER_INSTANCE = 350000
+MIN_INSTANCES = 1
+MAX_INSTANCES = 3
+
+s3 = boto3.client("s3")
+autoscaling = boto3.client("autoscaling")
+cloudwatch = boto3.client("cloudwatch")
+scheduler = boto3.client("scheduler")
+
+
+def read_state():
+    try:
+        obj = s3.get_object(Bucket=S3_BUCKET, Key=STATE_KEY)
+        return json.loads(obj["Body"].read().decode("utf-8"))
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code in ("NoSuchKey", "404", "NotFound"):
+            return {"next_index": 0}
+        raise
+
+
+def stop_schedule():
+    try:
+        scheduler.delete_schedule(
+            Name=SCHEDULE_NAME,
+            GroupName=SCHEDULE_GROUP
+        )
+        print("Replay complete. Schedule deleted.")
+    except ClientError as e:
+        if e.response["Error"]["Code"] != "ResourceNotFoundException":
+            raise
+
+
+def lambda_handler(event, context):
+    # Read workload CSV
+    obj = s3.get_object(Bucket=S3_BUCKET, Key=CSV_KEY)
+    content = obj["Body"].read().decode("utf-8")
+    rows = list(csv.DictReader(io.StringIO(content)))
+
+    if not rows or not {"timestamp", "workload"}.issubset(rows[0]):
+        raise ValueError(
+            "CSV must contain timestamp and workload columns"
+        )
+
+    # Read replay position
+    state = read_state()
+    index = int(state.get("next_index", 0))
+
+    # Stop if all observations are already processed
+    if index >= len(rows):
+        stop_schedule()
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "message": "Trace replay complete",
+                "workload_points": len(rows),
+                "next_index": index
+            })
+        }
+
+    row = rows[index]
+    timestamp = int(float(row["timestamp"]))
+    workload = float(row["workload"])
+
+    # Read current Auto Scaling Group desired capacity
+    response = autoscaling.describe_auto_scaling_groups(
+        AutoScalingGroupNames=[ASG_NAME]
+    )
+    groups = response["AutoScalingGroups"]
+
+    if not groups:
+        raise ValueError(
+            f"Auto Scaling Group not found: {ASG_NAME}"
+        )
+
+    instances = groups[0]["DesiredCapacity"]
+
+    if not MIN_INSTANCES <= instances <= MAX_INSTANCES:
+        raise ValueError(
+            "Desired capacity is outside configured limits"
+        )
+
+    # Estimate CPU from this workload observation
+    estimated_cpu = min(
+        workload / (instances * CAPACITY_PER_INSTANCE) * 100,
+        100
+    )
+
+    # Publish dataset-derived CPU metric
+    cloudwatch.put_metric_data(
+        Namespace=METRIC_NAMESPACE,
+        MetricData=[{
+            "MetricName": METRIC_NAME,
+            "Dimensions": [{
+                "Name": "AutoScalingGroupName",
+                "Value": ASG_NAME
+            }],
+            "Unit": "Percent",
+            "Value": estimated_cpu
+        }]
+    )
+
+    # Save progress
+    next_index = index + 1
+    s3.put_object(
+        Bucket=S3_BUCKET,
+        Key=STATE_KEY,
+        Body=json.dumps({
+            "next_index": next_index
+        }).encode("utf-8"),
+        ContentType="application/json"
+    )
+
+    # Automatically delete the schedule after the final observation
+    if next_index >= len(rows):
+        stop_schedule()
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({
+            "message": "Workload observation processed",
+            "row_index": index,
+            "timestamp_ms": timestamp,
+            "workload": workload,
+            "desired_instances": instances,
+            "estimated_cpu_percent": round(estimated_cpu, 2),
+            "metric_namespace": METRIC_NAMESPACE,
+            "metric_name": METRIC_NAME,
+            "next_index": next_index,
+            "trace_complete": next_index >= len(rows)
+        })
+    }
 
